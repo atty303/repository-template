@@ -1,0 +1,6 @@
+[template]
+cargo_generate_version = ">= 0.23.0"
+ignore = ["cargo-generate-mod.rhai"]
+
+[hooks]
+init = ["cargo-generate-init.rhai"]

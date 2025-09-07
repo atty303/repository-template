@@ -3,6 +3,7 @@ cargo_generate_version = ">= 0.23.0"
 include = ["deno.jsonc", "LICENSE"]
 
 [hooks]
+init = ["../init.rhai"]
 pre = ["../license.rhai"]
 
 [placeholders.license]

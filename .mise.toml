@@ -7,5 +7,8 @@ pkl = "latest"
 experimental = true
 npm.bun = true
 
+[tasks.update-mod]
+run = "ls */cargo-generate-mod.rhai | xargs cp cargo-generate-mod.rhai"
+
 [tasks.generate]
 run = "cargo-generate generate --path ."
