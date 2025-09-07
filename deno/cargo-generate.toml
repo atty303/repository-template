@@ -1,10 +1,10 @@
 [template]
 cargo_generate_version = ">= 0.23.0"
-include = ["deno.jsonc", "LICENSE"]
+ignore = ["cargo-generate-mod.rhai"]
+include = ["LICENSE", "deno.jsonc"]
 
 [hooks]
-init = ["../init.rhai"]
-pre = ["../license.rhai"]
+init = ["cargo-generate-init.rhai"]
 
 [placeholders.license]
 type = "string"

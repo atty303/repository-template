@@ -1,6 +1,13 @@
 [template]
 cargo_generate_version = ">= 0.23.0"
 ignore = ["cargo-generate-mod.rhai"]
+include = ["LICENSE"]
 
 [hooks]
 init = ["cargo-generate-init.rhai"]
+
+[placeholders.license]
+type = "string"
+prompt = "What license to use?"
+choices = ["MIT"]
+default = "MIT"

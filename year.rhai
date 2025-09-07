@@ -1,1 +1,0 @@
-system::date().year.to_string();

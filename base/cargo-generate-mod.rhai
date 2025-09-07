@@ -5,7 +5,7 @@ fn copy_files(name, base, files) {
   for file in files {
     let source = `${base}/${file}`;
     if is_windows {
-      script.push(`New-Item -ItemType Directory -Force -Path (Split-Path -Parent '${source}') | Out-Null`);
+      script.push(`New-Item -ItemType Directory -Force -Path (Split-Path -Parent '${file}') | Out-Null`);
       script.push(`Copy-Item '${source}' '${file}'`);
     } else {
       script.push(`mkdir -p $(dirname "${file}") && cp -p "${source}" "${file}"`);
