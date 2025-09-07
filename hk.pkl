@@ -1,0 +1,172 @@
+amends "package://github.com/jdx/hk/releases/download/v1.10.7/hk@1.10.7#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.10.7/hk@1.10.7#/Builtins.pkl"
+
+local function deno(name: String): Mapping<String, Step> = new Mapping<String, Step> {
+    // Deno: https://docs.deno.com/runtime/fundamentals/linting_and_formatting/
+    // https://docs.deno.com/runtime/reference/cli/fmt/
+    ["deno_fmt_\(name)"] {
+      workspace_indicator = name
+      glob = List("*.js", "*.jsx", "*.ts", "*.tsx", "deno.jsonc")
+      stage = glob
+      check = "deno fmt --check {{ workspace_files }}"
+      fix = "deno fmt {{ workspace_files }}"
+      check_first = false
+    }
+    // https://docs.deno.com/runtime/reference/cli/check/
+    ["deno_check_\(name)"] {
+      workspace_indicator = name
+      glob = List("*.js", "*.jsx", "*.ts", "*.tsx")
+      stage = glob
+      check = "deno check --doc {{ workspace_files }}"
+    }
+    // https://docs.deno.com/runtime/reference/cli/lint/
+    ["deno_lint_\(name)"] {
+      workspace_indicator = name
+      glob = List("*.js", "*.jsx", "*.ts", "*.tsx")
+      stage = glob
+      check = "deno lint {{ workspace_files }}"
+      fix = "deno lint --fix {{ workspace_files }}"
+      check_first = false
+    }
+}
+
+local linters = new Mapping<String, Step> {
+    // GitHub Actions: https://github.com/rhysd/actionlint
+    ["action"] = (Builtins.actionlint) {
+      prefix = "mise exec actionlint shellcheck --"
+    }
+
+    // Dockerfile: https://github.com/hadolint/hadolint
+    ["hadolint"] = (Builtins.hadolint) {
+      prefix = "mise exec hadolint --"
+    }
+
+    // Rust
+    ["cargo_clippy"] = (Builtins.cargo_clippy) {
+      prefix = "mise exec -C {{ workspace }} --"
+      check = "cargo clippy --quiet"
+      fix = "cargo clippy --fix --allow-dirty --allow-staged --quiet"
+    }
+    ["cargo_fmt"] = (Builtins.cargo_fmt) {
+      prefix = "mise exec -C {{ workspace }} --"
+      check = "cargo fmt --check"
+      fix = "cargo fmt"
+      check_first = false
+    }
+
+    // Deno
+    ...deno("deno.json")
+    ...deno("deno.jsonc")
+
+    // Node
+    ["sort_package_json"] = (Builtins.sort_package_json) {
+      prefix = "mise exec npm:sort-package-json --"
+    }
+
+    // Kotlin: https://ktlint.github.io/
+    ["ktlint"] = (Builtins.ktlint) {
+      workspace_indicator = "gradlew"
+      prefix = "mise exec ktlint --"
+    }
+
+    // Lua
+    ["luacheck"] = (Builtins.luacheck) {
+      prefix = "mise exec luacheck --"
+    }
+    ["stylua"] = (Builtins.stylua) {
+      prefix = "mise exec stylua --"
+    }
+
+    // Markdown: https://github.com/DavidAnson/markdownlint
+    ["markdownlint"] = (Builtins.markdown_lint) {
+      prefix = "mise exec markdownlint --"
+      check = "markdownlint-cli2 {{ files }}"
+      fix = "markdownlint-cli2 --fix {{ files }}"
+    }
+
+    // Shell
+    ["shellcheck"] = (Builtins.shellcheck) {
+      prefix = "mise exec shellcheck --"
+    }
+    ["shfmt"] = (Builtins.shfmt) {
+      prefix = "mise exec shfmt --"
+      check_list_files = null
+    }
+
+    // JSON
+    ["json"] = new Step {
+      glob = "*.json"
+      prefix = "mise exec bun npm:@prantlf/jsonlint --"
+      check = "jsonlint --quiet --comments --trailing-commas --no-duplicate-keys {{ files }}"
+    }
+
+    // YAML
+    ["yamllint"] = (Builtins.yamllint) {
+      prefix = "mise exec yamllint --"
+    }
+    ["yq"] = (Builtins.yq) {
+      prefix = "mise exec yq --"
+      fix = null
+    }
+
+    // TOML
+    ["taplo"] = (Builtins.taplo) {
+      prefix = "mise exec taplo --"
+    }
+
+    // XML
+    ["xmllint"] = (Builtins.xmllint) {
+      prefix = "mise exec xmllint --"
+    }
+
+    // Pkl
+    ["pkl"] = new Step {
+      prefix = "mise exec pkl --"
+      glob = "*.pkl"
+      check = "pkl eval {{files}}"
+    }
+
+    // Scala
+    ["scalafmt"] {
+      workspace_indicator = ".scalafmt.conf"
+      prefix = "mise exec scala-cli --"
+      glob = "*.scala"
+      stage = glob
+      check = "scala-cli format --scalafmt-conf {{ workspace_indicator }} --check {{ files }}"
+      fix = "scala-cli format --scalafmt-conf {{ workspace_indicator }} {{ files }}"
+      check_first = false
+    }
+}
+
+hooks {
+    ["pre-commit"] {
+        fix = true
+        steps {
+            ...linters
+        }
+    }
+
+    ["post-commit"] {
+    }
+
+    ["post-checkout"] {
+    }
+
+    ["pre-push"] {
+    }
+
+    ["prepare-commit-msg"] {
+    }
+
+    ["fix"] {
+        fix = true
+        steps {
+            ...linters
+        }
+    }
+    ["check"] {
+        steps {
+            ...linters
+        }
+    }
+}

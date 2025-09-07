@@ -1,12 +1,20 @@
 {
-    // We use a minimal base image
-    "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-    "features": {
-        // Enable SSH access in Codespaces
-        "ghcr.io/devcontainers/features/sshd:1": {},
-        // All dev tools are managed by mise
-        "ghcr.io/atty303/devcontainer-features/mise:1": {
-            "activate": "shims"
-        }
+  // We use a minimal base image
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "features": {
+    // Enable SSH access in Codespaces
+    "ghcr.io/devcontainers/features/sshd:1": {},
+    // Mise manages all dev tools
+    "ghcr.io/atty303/devcontainer-features/mise:1": {
+      "installPath": "/home/me/.local/bin/mise"
     }
+  },
+  "remoteUser": "me",
+  "containerEnv": {
+    "PATH": "/home/me/.local/bin:/home/me/.local/share/mise/shims:${containerEnv:PATH}",
+    "MISE_TRUSTED_CONFIG_PATHS": "${containerWorkspaceFolder}"
+  },
+  "postStartCommand": {
+    "hk": "/home/me/.local/bin/mise exec -- hk install --mise"
+  }
 }
