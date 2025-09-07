@@ -1,0 +1,12 @@
+[template]
+cargo_generate_version = ">= 0.23.0"
+include = ["LICENSE"]
+
+[hooks]
+pre = ["../license.rhai"]
+
+[placeholders.license]
+type = "string"
+prompt = "What license to use?"
+choices = ["MIT"]
+default = "MIT"

@@ -1,0 +1,34 @@
+name: Release
+on:
+  push:
+    branches:
+      - main
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          github_token: ${{ github.token }}
+
+      - name: Run Checks
+        run: mise exec -- hk check --all
+
+      - name: Semantic Release
+        uses: cycjimmy/semantic-release-action@v4
+        with:
+          extra_plugins: |
+            @semantic-release/commit-analyzer
+            @semantic-release/release-notes-generator
+            @semantic-release/exec
+            @semantic-release/git
+            @semantic-release/github
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

@@ -1,0 +1,6 @@
+{
+  "name": "@atty303/{{project-name}}",
+  "version": "0.1.0",
+  "license": "{{license}}",
+  "exports": "./src/mod.ts"
+}

@@ -1,7 +1,11 @@
 [tools]
 hk = "latest"
 pkl = "latest"
+"github:cargo-generate/cargo-generate" = "latest"
 
 [settings]
 experimental = true
 npm.bun = true
+
+[tasks.generate]
+run = "cargo-generate generate --path ."

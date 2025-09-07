@@ -1,0 +1,25 @@
+name: Build Template
+on:
+  workflow_dispatch:
+  push:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      PROJECT_NAME: test-project
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup mise
+        uses: jdx/mise-action@v2
+        with:
+          github_token: ${{ github.token }}
+
+      - name: Generate project
+        uses: cargo-generate/cargo-generate-action@latest
+        with:
+          name: ${{ env.PROJECT_NAME }}
+
+      - name: Run checks
+        run: |
+          cd "$PROJECT_NAME"
+          hk check --all

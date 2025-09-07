@@ -1,0 +1,16 @@
+[tools]
+hk = "latest"
+pkl = "latest"
+deno = "latest"
+
+[settings]
+experimental = true
+npm.bun = true
+
+[tasks.prepare]
+description = "Prepare for release (Run from GitHub Actions)"
+run = """jq --arg v "{{option(name='version')}}" '.version = $v' deno.jsonc > tmp.json && mv tmp.json deno.jsonc"""
+
+[tasks.publish]
+description = "Publish to JSR (Run from GitHub Actions)"
+run = "npx jsr publish"
