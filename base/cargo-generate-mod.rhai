@@ -3,7 +3,7 @@ fn copy_files(name, base, files) {
 
   let script = [];
   for file in files {
-    let source = `${base}/${file}`;
+    let source = `${env::working_directory}/${base}/${file}`;
     if is_windows {
       script.push(`New-Item -ItemType Directory -Force -Path (Split-Path -Parent '${file}') | Out-Null`);
       script.push(`Copy-Item '${source}' '${file}'`);
