@@ -172,7 +172,7 @@ local format_linters = new Mapping<String, Step> {
   ["pkl"] {
     glob = "*.pkl"
     prefix = "mise exec pkl --"
-    check = "pkl eval {{files}}"
+    check = "pkl eval {{files}} >/dev/null"
   }
 
   // # TOML
