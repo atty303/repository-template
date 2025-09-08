@@ -1,9 +1,10 @@
 fn copy_files(name, base, files) {
   let is_windows = variable::get("os-arch").starts_with("windows");
-
+  print(system::command("pwd"));
+  print(system::command("ls -l"));
   let script = [];
   for file in files {
-    let source = `${env::working_directory}/${base}/${file}`;
+    let source = `${env::working_directory}${base}/${file}`;
     if is_windows {
       script.push(`New-Item -ItemType Directory -Force -Path (Split-Path -Parent '${file}') | Out-Null`);
       script.push(`Copy-Item '${source}' '${file}'`);

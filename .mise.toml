@@ -8,7 +8,7 @@ experimental = true
 npm.bun = true
 
 [tasks.update-mod]
-run = "ls */cargo-generate-mod.rhai | xargs cp cargo-generate-mod.rhai"
+run = "find . -mindepth 2 -name cargo-generate-mod.rhai -exec cp cargo-generate-mod.rhai {} \\;"
 
 [tasks.generate]
 run = "cargo-generate generate --path ."
