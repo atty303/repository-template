@@ -32,4 +32,5 @@ jobs:
           hk check --all
         env:
           MISE_TRUSTED_CONFIG_PATHS: /tmp
+          MISE_QUIET: "true"
           HK_FAIL_FAST: "false"
