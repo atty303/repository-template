@@ -1,4 +1,4 @@
-[tools."github:cargo-generate/cargo-generate"]
+ [tools."github:cargo-generate/cargo-generate"]
 version = "0.23.5"
 backend = "github:cargo-generate/cargo-generate"
 
