@@ -15,7 +15,7 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Generate project
-        run: mise exec github:cargo-generate/cargo-generate -- cargo-generate generate --path ./deno --name "$PROJECT_NAME" --allow-commands
+        run: mise exec github:cargo-generate/cargo-generate -- cargo-generate generate --path . --name "$PROJECT_NAME" --allow-commands base
         env:
           CARGO_GENERATE_VALUE_LICENSE: MIT
 
