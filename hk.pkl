@@ -152,7 +152,7 @@ local format_linters = new Mapping<String, Step> {
   ["markdown:markdownlint"] {
     glob = List("*.md", "*.markdown")
     stage = glob
-    prefix = "mise exec markdownlint --"
+    prefix = "mise exec markdownlint-cli2 --"
     check = "markdownlint-cli2 {{files}}"
     fix = "markdownlint-cli2 --fix {{files}}"
     check_first = false

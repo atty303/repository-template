@@ -16,4 +16,6 @@ mise exec github:cargo-generate/cargo-generate -- cargo-generate generate atty30
 
 - Manage project-specific development tools using [mise](https://mise.jdx.dev/).
 - Manage Git Hooks with [hk](https://hk.jdx.dev/). Run linters through mise.
-- Use devcontainer to unify local and CDE (Codespaces, ONA) environments. The container only depends on mise, so the local environment is nearly identical if mise is available.
+- Use devcontainer to unify local and CDE (Codespaces, ONA) environments.
+  The container only depends on mise, so the local environment is nearly
+  identical if mise is available.
