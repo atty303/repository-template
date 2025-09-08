@@ -5,8 +5,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        template:
+          - base
+          - deno
     env:
-      PROJECT_NAME: test-project
+      PROJECT_NAME: ${{ matrix.template }}
     steps:
       - uses: actions/checkout@v4
       - name: Setup mise
@@ -15,12 +21,13 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Generate project
-        run: mise exec github:cargo-generate/cargo-generate -- cargo-generate generate --path . --name "$PROJECT_NAME" --allow-commands --vcs git --destination /tmp base
+        run: mise exec github:cargo-generate/cargo-generate -- cargo-generate generate --path . --name "$PROJECT_NAME" --allow-commands --vcs git --destination /tmp ${{ matrix.template }}
         env:
           CARGO_GENERATE_VALUE_LICENSE: MIT
 
       - name: Run checks
+        working-directory: /tmp/${{ env.PROJECT_NAME }}
         run: |
-          cd /tmp/"$PROJECT_NAME"
-          mise trust
           hk check --all
+        env:
+          MISE_TRUSTED_CONFIG_PATHS: /tmp
