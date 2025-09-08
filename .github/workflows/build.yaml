@@ -15,13 +15,12 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Generate project
-        run: mise exec github:cargo-generate/cargo-generate -- cargo-generate generate --path . --name "$PROJECT_NAME" --allow-commands base
+        run: mise exec github:cargo-generate/cargo-generate -- cargo-generate generate --path . --name "$PROJECT_NAME" --allow-commands --vcs git --destination /tmp base
         env:
           CARGO_GENERATE_VALUE_LICENSE: MIT
 
       - name: Run checks
         run: |
-          mv "$PROJECT_NAME" /tmp
           cd /tmp/"$PROJECT_NAME"
           mise trust
           hk check --all
