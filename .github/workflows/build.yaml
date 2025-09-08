@@ -18,6 +18,7 @@ jobs:
         uses: cargo-generate/cargo-generate-action@latest
         with:
           name: ${{ env.PROJECT_NAME }}
+          template: ./base
         env:
           CARGO_GENERATE_VALUE_LICENSE: MIT
 

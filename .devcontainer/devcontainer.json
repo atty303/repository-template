@@ -1,0 +1,20 @@
+{
+  "image": "mcr.microsoft.com/devcontainers/base:2-ubuntu",
+  "features": {
+    // Enable SSH access in Codespaces
+    "ghcr.io/devcontainers/features/sshd:1": {},
+    // Mise manages all dev tools
+    "ghcr.io/atty303/devcontainer-features/mise:1": {
+      "installPath": "{REMOTE_USER_HOME}/.local/bin/mise"
+    }
+  },
+  "remoteUser": "vscode",
+  "remoteEnv": {
+    "PATH": "${containerEnv:HOME}/.local/bin:${containerEnv:HOME}/.local/share/mise/shims:${containerEnv:PATH}",
+    "MISE_TRUSTED_CONFIG_PATHS": "${containerWorkspaceFolder}"
+  },
+  "postStartCommand": {
+    "mise": "${HOME}/.local/bin/mise install --yes && mise doctor",
+    "hk": "${HOME}/.local/bin/mise exec -- hk install --mise"
+  }
+}
