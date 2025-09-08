@@ -15,10 +15,7 @@ jobs:
           github_token: ${{ github.token }}
 
       - name: Generate project
-        uses: cargo-generate/cargo-generate-action@latest
-        with:
-          name: ${{ env.PROJECT_NAME }}
-          template: ./base
+        run: mise exec github:cargo-generate/cargo-generate -- cargo-generate generate --path ./deno --name "$PROJECT_NAME"
         env:
           CARGO_GENERATE_VALUE_LICENSE: MIT
 
