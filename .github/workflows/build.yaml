@@ -29,7 +29,7 @@ jobs:
         working-directory: /tmp/${{ env.PROJECT_NAME }}
         run: |
           mise install --yes
-          hk check --all
+          hk check --all --no-progress
         env:
           MISE_TRUSTED_CONFIG_PATHS: /tmp
           MISE_QUIET: "true"
