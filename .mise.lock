@@ -1,0 +1,16 @@
+[tools."github:cargo-generate/cargo-generate"]
+version = "0.23.5"
+backend = "github:cargo-generate/cargo-generate"
+
+[tools.hk]
+version = "1.12.0"
+backend = "aqua:jdx/hk"
+
+[tools.hk.platforms.linux-x64]
+checksum = "blake3:5f4f62704bca96314d3ae11e2b0f0c9e76d07058f18676a5c31981763eb81d16"
+size = 6753765
+url = "https://github.com/jdx/hk/releases/download/v1.12.0/hk-x86_64-unknown-linux-gnu.tar.gz"
+
+[tools.pkl]
+version = "0.29.1"
+backend = "aqua:apple/pkl"
