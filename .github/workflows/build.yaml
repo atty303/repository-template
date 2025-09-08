@@ -21,5 +21,7 @@ jobs:
 
       - name: Run checks
         run: |
-          cd "$PROJECT_NAME"
+          mv "$PROJECT_NAME" /tmp
+          cd /tmp/"$PROJECT_NAME"
+          mise trust
           hk check --all

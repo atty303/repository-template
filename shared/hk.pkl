@@ -10,7 +10,7 @@ local function deno(name: String): Mapping<String, Step> = new Mapping<String, S
     workspace_indicator = name
     glob = List("*.js", "*.jsx", "*.ts", "*.tsx", "deno.jsonc")
     stage = glob
-    check = "mise exec -C {{workspace}} -- pwd && echo deno fmt --check {{workspace_files}}"
+    check = "mise exec -C {{workspace}} -- deno fmt --check {{workspace_files}}"
     fix = "mise exec -C {{workspace}} -- deno fmt {{workspace_files}}"
     check_first = false
   }
