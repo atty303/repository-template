@@ -1,14 +1,15 @@
 name: Release
 on:
   push:
-    branches:
-      - main
+  pull_request:
 jobs:
   main:
     runs-on: ubuntu-latest
     permissions:
       contents: write
       id-token: write
+    env:
+      BASH_ENV: /tmp/bash_env
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -18,10 +19,22 @@ jobs:
         with:
           github_token: ${{ github.token }}
 
+      - name: Activate mise
+        run: |
+          # shellcheck disable=SC2016
+          echo 'eval "$(mise activate bash)"' >> "$BASH_ENV"
+          # shellcheck disable=SC1090
+          . "$BASH_ENV"
+          mise doctor
+
       - name: Run Checks
-        run: mise exec -- hk check --all
+        run: hk check --all
+
+      - name: Run Tests
+        run: if mise task info test; then mise run test; fi
 
       - name: Semantic Release
+        if: github.event_name == 'push'
         uses: cycjimmy/semantic-release-action@v4
         with:
           extra_plugins: |

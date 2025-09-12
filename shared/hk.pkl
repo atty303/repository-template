@@ -68,12 +68,7 @@ local language_linters = new Mapping<String, Step> {
   // TODO: detekt
 
   // # Lua
-  ["lua:luacheck"] {
-    glob = List("*.lua")
-    prefix = "mise exec luacheck --"
-    check = "luacheck {{files}}"
-  }
-  ["lua:stylua"] = (Builtins.stylua) {
+  ["lua:stylua"] {
     glob = List("*.lua")
     stage = glob
     prefix = "mise exec stylua --"

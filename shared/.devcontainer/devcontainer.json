@@ -14,7 +14,6 @@
     "MISE_TRUSTED_CONFIG_PATHS": "${containerWorkspaceFolder}"
   },
   "postStartCommand": {
-    "mise": "${HOME}/.local/bin/mise install --yes && mise doctor",
-    "hk": "${HOME}/.local/bin/mise exec -- hk install --mise"
+    "mise": "mise install --yes && mise doctor && hk install --mise"
   }
 }

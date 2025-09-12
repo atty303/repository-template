@@ -1,7 +1,3 @@
 [tools]
 hk = "latest"
 pkl = "latest"
-
-[settings]
-experimental = true
-npm.bun = true
