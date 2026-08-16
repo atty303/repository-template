@@ -1,0 +1,22 @@
+{% raw %}amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
+import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtins.pkl"
+
+min_hk_version = "1.55.0"
+
+local linters = new Mapping<String, Step> {
+  ["actionlint"] = (Builtins.actionlint) {
+    check = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
+  }
+  ["case-conflict"] = Builtins.check_case_conflict
+  ["merge-conflict"] = Builtins.check_merge_conflict
+  ["mise"] = Builtins.mise
+  ["private-key"] = Builtins.detect_private_key
+  ["taplo"] = Builtins.taplo
+}
+{% endraw %}
+
+hooks {
+  ["pre-commit"] { fix = true; stash = "git"; steps = linters }
+  ["check"] { steps = linters }
+  ["fix"] { fix = true; steps = linters }
+}

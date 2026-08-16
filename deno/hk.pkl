@@ -1,30 +1,25 @@
-amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
+{% raw %}amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
 import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtins.pkl"
 
 min_hk_version = "1.55.0"
 
 local linters = new Mapping<String, Step> {
-  ["archetect:interface"] {
-    glob = List("archetype.lua", "archetype.yaml", "shared/**/*", "base/**/*", "deno/**/*", "deno-release/**/*")
-    check = new Command { argv = List("archetect", "interface", ".", "--json", "--explore") }
-  }
   ["actionlint"] = (Builtins.actionlint) {
-    glob = List(".github/workflows/*.yml", ".github/workflows/*.yaml")
     check = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
   }
   ["case-conflict"] = Builtins.check_case_conflict
   ["deno:check"] {
-    glob = "scripts/*.ts"
-    check = new Command { argv = List("deno", "check", "{{files}}") }
+    glob = List("*.js", "*.jsx", "*.mts", "*.ts", "*.tsx")
+    check = new Command { argv = List("deno", "check", "--doc", "{{files}}") }
   }
   ["deno:fmt"] {
-    glob = List("scripts/*.ts", "README.md")
+    glob = List("*.js", "*.jsx", "*.json", "*.jsonc", "*.md", "*.mts", "*.ts", "*.tsx")
     stage = glob
     check = new Command { argv = List("deno", "fmt", "--check", "{{files}}") }
     fix = new Command { argv = List("deno", "fmt", "{{files}}") }
   }
   ["deno:lint"] {
-    glob = "scripts/*.ts"
+    glob = List("*.js", "*.jsx", "*.mts", "*.ts", "*.tsx")
     stage = glob
     check = new Command { argv = List("deno", "lint", "{{files}}") }
     fix = new Command { argv = List("deno", "lint", "--fix", "{{files}}") }
@@ -32,10 +27,9 @@ local linters = new Mapping<String, Step> {
   ["merge-conflict"] = Builtins.check_merge_conflict
   ["mise"] = Builtins.mise
   ["private-key"] = Builtins.detect_private_key
-  ["taplo"] = (Builtins.taplo) {
-    glob = "mise.toml"
-  }
+  ["taplo"] = Builtins.taplo
 }
+{% endraw %}
 
 hooks {
   ["pre-commit"] { fix = true; stash = "git"; steps = linters }

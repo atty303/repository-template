@@ -1,0 +1,7 @@
+description: Reproducible, agent-friendly repository templates
+requires:
+  archetect: "3.4.3"
+templating:
+  undefined: strict
+  trim_blocks: true
+  lstrip_blocks: true
