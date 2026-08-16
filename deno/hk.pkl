@@ -1,4 +1,4 @@
-amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
+{% raw %}amends "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Config.pkl"
 import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtins.pkl"
 
 min_hk_version = "1.55.0"
@@ -29,6 +29,7 @@ local linters = new Mapping<String, Step> {
   ["private-key"] = Builtins.detect_private_key
   ["taplo"] = Builtins.taplo
 }
+{% endraw %}
 
 hooks {
   ["pre-commit"] { fix = true; stash = "git"; steps = linters }

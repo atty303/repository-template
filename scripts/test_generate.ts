@@ -1,17 +1,23 @@
-import { generateProject } from "./generate.ts";
-
 type License = "MIT" | "Apache-2.0";
 type Template = "base" | "deno";
 
 interface Scenario {
   license: License;
   name: string;
+  projectName?: string;
   semanticRelease: boolean;
   template: Template;
 }
 
+const author = "Template Test <template@example.com>";
 const scenarios: Scenario[] = [
-  { name: "base-mit", template: "base", license: "MIT", semanticRelease: false },
+  {
+    name: "base-mit",
+    projectName: "Base Mit",
+    template: "base",
+    license: "MIT",
+    semanticRelease: false,
+  },
   { name: "base-apache", template: "base", license: "Apache-2.0", semanticRelease: false },
   { name: "deno-mit", template: "deno", license: "MIT", semanticRelease: false },
   { name: "deno-apache-release", template: "deno", license: "Apache-2.0", semanticRelease: true },
@@ -31,6 +37,10 @@ function assert(condition: boolean, message: string): asserts condition {
   if (!condition) throw new Error(message);
 }
 
+function containsAtlTag(source: string): boolean {
+  return source.includes("{%") || /(^|[^$])\{\{/.test(source);
+}
+
 async function run(command: string, args: string[], cwd: string): Promise<void> {
   console.log(`$ ${command} ${args.join(" ")} (${cwd})`);
   const status = await new Deno.Command(command, {
@@ -45,6 +55,27 @@ async function run(command: string, args: string[], cwd: string): Promise<void> 
   }
 }
 
+async function generateProject(
+  archetype: string,
+  destination: string,
+  scenario: Scenario,
+): Promise<void> {
+  const archetect = Deno.env.get("REPOSITORY_TEMPLATE_ARCHETECT") ?? "archetect";
+  const answers = [
+    `template=${scenario.template}`,
+    `project_name=${scenario.projectName ?? scenario.name}`,
+    `author=${author}`,
+    `license=${scenario.license}`,
+  ];
+  if (scenario.template === "deno") {
+    answers.push(`semantic_release=${scenario.semanticRelease}`);
+  }
+
+  const args = ["render", archetype, destination, "--headless"];
+  for (const answer of answers) args.push("-a", answer);
+  await run(archetect, args, archetype);
+}
+
 async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
   const project = `${root}/${scenario.name}`;
   const license = await Deno.readTextFile(`${project}/LICENSE`);
@@ -52,7 +83,11 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
     license.startsWith(scenario.license === "MIT" ? "MIT License" : "Apache License"),
     `${scenario.name}: generated the wrong license`,
   );
-  assert(!license.includes("{%"), `${scenario.name}: LICENSE contains Liquid tags`);
+  assert(license.includes(author), `${scenario.name}: LICENSE lacks the explicit author`);
+  assert(!containsAtlTag(license), `${scenario.name}: LICENSE contains ATL tags`);
+
+  const readme = await Deno.readTextFile(`${project}/README.md`);
+  assert(readme.startsWith(`# ${scenario.name}\n`), `${scenario.name}: README has the wrong project name`);
 
   const releaseFiles = [
     ".github/workflows/release.yml",
@@ -67,7 +102,8 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
   }
 
   const ci = await Deno.readTextFile(`${project}/.github/workflows/ci.yml`);
-  assert(!ci.includes("{%"), `${scenario.name}: CI workflow contains Liquid tags`);
+  assert(!containsAtlTag(ci), `${scenario.name}: CI workflow contains ATL tags`);
+  assert(ci.includes("${{ github.workflow }}"), `${scenario.name}: CI lost a GitHub expression`);
   assert(!ci.includes("id-token: write"), `${scenario.name}: CI has release permissions`);
 
   const miseConfig = await Deno.readTextFile(`${project}/mise.toml`);
@@ -75,15 +111,18 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
     miseConfig.includes("[tasks.prepare]") === scenario.semanticRelease,
     `${scenario.name}: unexpected prepare task state`,
   );
-  assert(!miseConfig.includes("{%"), `${scenario.name}: mise.toml contains Liquid tags`);
+  assert(
+    !containsAtlTag(miseConfig),
+    `${scenario.name}: mise.toml contains ATL tags`,
+  );
 
   if (scenario.template === "deno") {
     const manifest = await Deno.readTextFile(`${project}/deno.jsonc`);
     assert(
-      manifest.includes(`"license": "${scenario.license}"`),
-      `${scenario.name}: deno.jsonc has the wrong license`,
+      manifest.includes(`"name": "@atty303/${scenario.name}"`) &&
+        manifest.includes(`"license": "${scenario.license}"`),
+      `${scenario.name}: deno.jsonc has the wrong name or license`,
     );
-    const readme = await Deno.readTextFile(`${project}/README.md`);
     assert(
       (readme.includes("Before the first release, create") &&
         readme.includes("package settings")) === scenario.semanticRelease,
@@ -95,7 +134,10 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
     const releaseWorkflow = await Deno.readTextFile(
       `${project}/.github/workflows/release.yml`,
     );
-    assert(!releaseWorkflow.includes("{%"), `${scenario.name}: release workflow contains Liquid tags`);
+    assert(
+      !containsAtlTag(releaseWorkflow),
+      `${scenario.name}: release workflow contains ATL tags`,
+    );
     for (
       const expected of [
         "id-token: write",
@@ -124,6 +166,8 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
     );
   }
 
+  await run("git", ["init", "--initial-branch=main"], project);
+
   const mise = Deno.env.get("REPOSITORY_TEMPLATE_MISE") ?? "mise";
   await run(mise, ["trust", "--yes", `${project}/mise.toml`], project);
   await run(mise, ["install", "--yes"], project);
@@ -145,13 +189,30 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
   await run(mise, ["run", "test"], project);
 }
 
+async function verifyDenoNamePreserved(archetype: string, destination: string): Promise<void> {
+  const scenario: Scenario = {
+    name: "a-",
+    template: "deno",
+    license: "MIT",
+    semanticRelease: false,
+  };
+  await generateProject(archetype, destination, scenario);
+  const manifest = await Deno.readTextFile(`${destination}/${scenario.name}/deno.jsonc`);
+  assert(
+    manifest.includes('"name": "@atty303/a-"'),
+    "Deno project_name was changed after validation",
+  );
+}
+
 if (import.meta.main) {
+  const archetype = await Deno.realPath(new URL("../", import.meta.url));
   const destination = await Deno.makeTempDir({ prefix: "repository-template-" });
   try {
     for (const scenario of scenarios) {
-      await generateProject({ destination, ...scenario });
+      await generateProject(archetype, destination, scenario);
       await verifyScenario(destination, scenario);
     }
+    await verifyDenoNamePreserved(archetype, destination);
   } finally {
     await Deno.remove(destination, { recursive: true });
   }

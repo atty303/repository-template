@@ -1,7 +1,7 @@
 {
-  "name": "@atty303/{{project-name}}",
+  "name": "@atty303/{{ project_slug }}",
   "version": "0.1.0",
-  "license": "{{license}}",
+  "license": "{{ license }}",
   "exports": "./src/mod.ts",
   "publish": {
     "include": [

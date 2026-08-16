@@ -4,6 +4,10 @@ import "package://github.com/jdx/hk/releases/download/v1.55.0/hk@1.55.0#/Builtin
 min_hk_version = "1.55.0"
 
 local linters = new Mapping<String, Step> {
+  ["archetect:interface"] {
+    glob = List("archetype.lua", "archetype.yaml", "shared/**/*", "base/**/*", "deno/**/*", "deno-release/**/*")
+    check = new Command { argv = List("archetect", "interface", ".", "--json", "--explore") }
+  }
   ["actionlint"] = (Builtins.actionlint) {
     glob = List(".github/workflows/*.yml", ".github/workflows/*.yaml")
     check = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
@@ -29,7 +33,7 @@ local linters = new Mapping<String, Step> {
   ["mise"] = Builtins.mise
   ["private-key"] = Builtins.detect_private_key
   ["taplo"] = (Builtins.taplo) {
-    glob = List("mise.toml", "cargo-generate.toml", "base/cargo-generate.toml", "deno/cargo-generate.toml")
+    glob = "mise.toml"
   }
 }
 

@@ -1,4 +1,4 @@
-# {{project-name}}
+# {{ project_slug }}
 
 ## Setup
 
@@ -24,4 +24,4 @@ Pass selected files after `--`, for example `mise run check -- README.md`.
 
 ## License
 
-{{license}}
+{{ license }}

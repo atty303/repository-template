@@ -2,13 +2,11 @@
 
 ## Project Structure & Module Organization
 
-This repository is a `cargo-generate` template collection. The root
-`cargo-generate.toml` selects the `base` or `deno` subtemplate.
-`scripts/generate.ts` provides the non-interactive generation interface, and
-`scripts/sync_shared.ts` keeps the committed copies of common files aligned.
-`base/` is language-neutral; `deno/` adds TypeScript source, tests, JSR package
-metadata, and opt-in release automation. Edit common generated files in
-`shared/`, then synchronize them into both subtemplates.
+This repository is one Archetect archetype. Root `archetype.yaml` declares the
+engine contract and `archetype.lua` collects answers and renders the selected
+variant. `shared/` is rendered into every generated repository; `base/` is
+language-neutral, `deno/` adds TypeScript source and JSR metadata, and
+`deno-release/` is an optional overlay for semantic-release automation.
 
 Root-level `mise.toml`, `mise.lock`, `hk.pkl`, and `.github/workflows/ci.yml`
 configure maintenance and validate the representative generation matrix.
@@ -17,16 +15,14 @@ configure maintenance and validate the representative generation matrix.
 
 - `mise install --yes` installs the pinned template-development tools and hk
   hooks.
-- Generate without prompts using the following interface. The release flag is
-  valid only for Deno.
+- Generate without prompts using the native Archetect interface. The
+  `semantic_release` answer is valid only for Deno.
 
   ```sh
-  mise run generate -- --name NAME --template base|deno --license MIT|Apache-2.0 --destination PATH [--semantic-release]
+  mise run generate -- DESTINATION --headless -a template=base|deno -a project_name=NAME -a 'author=NAME <EMAIL>' -a license=MIT|Apache-2.0 [-a semantic_release=true]
   ```
-- `mise run generate:interactive` starts an interactive cargo-generate
-  session.
-- `mise run sync` copies common files from `shared/` into both subtemplates;
-  `mise run sync:check` detects drift without changing files.
+- Omit `--headless` and answers to use Archetect prompts. Initialize Git in the
+  generated repository as a separate operation.
 - `mise run check`, `mise run fix`, and `mise run test` are the standard
   validation and repair entrypoints. Pass selected paths after `--` to check or
   fix only those files.
@@ -40,16 +36,17 @@ command exists. Pkl and YAML steps validate only. Use lowercase directory
 names, colon-separated mise task namespaces with kebab-case segments, and
 conventional TypeScript module names such as `mod.ts`.
 
-Treat `shared/` as the source of truth only for files listed in
-`scripts/sync_shared.ts`. Template-specific mise, hk, README, source, and
-release files remain under their respective subtemplate.
+Treat `shared/` as the only source of truth for common generated files. Keep
+variant-specific mise, hk, README, and source files under `base/` or `deno/`,
+and release-only files under `deno-release/`.
 
 ## Testing Guidelines
 
-`mise run test` includes root static checks, shared-file drift detection,
-focused script tests, and non-interactive generation of four representative
-projects. Each generated project installs its locked tools and runs its own
-`mise run test`; Deno projects also run unit tests and a JSR publish dry run.
+`mise run test` includes root static checks and Archetect-driven generation of
+four representative projects. The test initializes Git explicitly, installs
+each generated project's locked tools, and runs its `mise run test`; Deno
+projects also run unit tests and a JSR publish dry run. Deno is a root testing
+dependency, not a requirement for normal Archetect rendering.
 
 When adding runtime behavior to a generated project, add focused tests in that
 subtemplate and expose them through its `mise run test` task. Never exercise an

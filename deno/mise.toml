@@ -47,7 +47,7 @@ deno test
 deno publish --dry-run --allow-dirty
 '''
 
-{% if semantic_release %}[tasks.prepare]
+{% if semantic_release then %}[tasks.prepare]
 description = "Set the release version (GitHub Actions only)"
 usage = 'flag "--version <version>"'
 run = 'deno run --allow-read=deno.jsonc --allow-write=deno.jsonc scripts/set_version.ts "$usage_version"'
@@ -55,4 +55,4 @@ run = 'deno run --allow-read=deno.jsonc --allow-write=deno.jsonc scripts/set_ver
 [tasks.publish]
 description = "Publish to JSR (GitHub Actions only)"
 run = "deno publish"
-{% endif %}
+{% end %}

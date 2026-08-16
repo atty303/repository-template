@@ -78,44 +78,39 @@ url = "https://dl.deno.land/release/v2.9.5/deno-x86_64-apple-darwin.zip"
 checksum = "sha256:171efab55ac6b9881fd53ee4c20f8bf3bb1340ffc618483746909014db12216a"
 url = "https://dl.deno.land/release/v2.9.5/deno-x86_64-pc-windows-msvc.zip"
 
-[[tools."github:cargo-generate/cargo-generate"]]
-version = "0.23.14"
-backend = "github:cargo-generate/cargo-generate"
+[[tools."github:archetect/archetect"]]
+version = "3.4.3"
+backend = "github:archetect/archetect"
 
-[tools."github:cargo-generate/cargo-generate"."platforms.linux-arm64"]
-checksum = "sha256:92e916e92898e9f3074488aeb768e7cac9b91cffa0bf62a73c8ca8fe95fe6e8e"
-url = "https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.14/cargo-generate-v0.23.14-aarch64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/cargo-generate/cargo-generate/releases/assets/487652499"
+[tools."github:archetect/archetect"."platforms.linux-arm64"]
+checksum = "sha256:fcec8b8e96b0b85efa4bf3072a47170f7d3fa750092051c41355e33364f1306f"
+url = "https://github.com/archetect/archetect/releases/download/v3.4.3/archetect-v3.4.3-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/archetect/archetect/releases/assets/502934937"
 
-[tools."github:cargo-generate/cargo-generate"."platforms.linux-arm64-musl"]
-checksum = "sha256:b87b10129d59182892aadbf0da7fa2be50522cb8dc32c44d032559c9661a8cd0"
-url = "https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.14/cargo-generate-v0.23.14-aarch64-unknown-linux-musl.tar.gz"
-url_api = "https://api.github.com/repos/cargo-generate/cargo-generate/releases/assets/487652613"
+[tools."github:archetect/archetect"."platforms.linux-arm64-musl"]
+checksum = "sha256:fcec8b8e96b0b85efa4bf3072a47170f7d3fa750092051c41355e33364f1306f"
+url = "https://github.com/archetect/archetect/releases/download/v3.4.3/archetect-v3.4.3-linux-arm64.tar.gz"
+url_api = "https://api.github.com/repos/archetect/archetect/releases/assets/502934937"
 
-[tools."github:cargo-generate/cargo-generate"."platforms.linux-x64"]
-checksum = "sha256:156dce2a5737d18215dbf3238d46bdd2595497e2aced120f69e5eb6a9c745bb2"
-url = "https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.14/cargo-generate-v0.23.14-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/cargo-generate/cargo-generate/releases/assets/487652519"
+[tools."github:archetect/archetect"."platforms.linux-x64"]
+checksum = "sha256:e68b3df5033151162f77d302f8d4268bc5b069f56fe5731401f05615c191eccd"
+url = "https://github.com/archetect/archetect/releases/download/v3.4.3/archetect-v3.4.3-linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/archetect/archetect/releases/assets/502935500"
 
-[tools."github:cargo-generate/cargo-generate"."platforms.linux-x64-musl"]
-checksum = "sha256:156dce2a5737d18215dbf3238d46bdd2595497e2aced120f69e5eb6a9c745bb2"
-url = "https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.14/cargo-generate-v0.23.14-x86_64-unknown-linux-gnu.tar.gz"
-url_api = "https://api.github.com/repos/cargo-generate/cargo-generate/releases/assets/487652519"
+[tools."github:archetect/archetect"."platforms.linux-x64-musl"]
+checksum = "sha256:e68b3df5033151162f77d302f8d4268bc5b069f56fe5731401f05615c191eccd"
+url = "https://github.com/archetect/archetect/releases/download/v3.4.3/archetect-v3.4.3-linux-x86_64.tar.gz"
+url_api = "https://api.github.com/repos/archetect/archetect/releases/assets/502935500"
 
-[tools."github:cargo-generate/cargo-generate"."platforms.macos-arm64"]
-checksum = "sha256:fdbe0d8bf9b8aa734af4b9ded36a9164cf7691e1bd13bae6317176e18ad95883"
-url = "https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.14/cargo-generate-v0.23.14-aarch64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/cargo-generate/cargo-generate/releases/assets/487649591"
+[tools."github:archetect/archetect"."platforms.macos-arm64"]
+checksum = "sha256:749185b929e0505063651a33c2044eb06977657025e785dc6389bc4893a3ebaa"
+url = "https://github.com/archetect/archetect/releases/download/v3.4.3/archetect-v3.4.3-macos-arm64.tar.gz"
+url_api = "https://api.github.com/repos/archetect/archetect/releases/assets/502935994"
 
-[tools."github:cargo-generate/cargo-generate"."platforms.macos-x64"]
-checksum = "sha256:e101fedf0aa0456ee769aaad8903cb23368d3fe2d22dbbdac832a6a9d18a8374"
-url = "https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.14/cargo-generate-v0.23.14-x86_64-apple-darwin.tar.gz"
-url_api = "https://api.github.com/repos/cargo-generate/cargo-generate/releases/assets/487648185"
-
-[tools."github:cargo-generate/cargo-generate"."platforms.windows-x64"]
-checksum = "sha256:13e4400988b41ef42a82956ba45d6fb120cac9065b23caa3c2a5c01334070bc0"
-url = "https://github.com/cargo-generate/cargo-generate/releases/download/v0.23.14/cargo-generate-v0.23.14-x86_64-pc-windows-msvc.tar.gz"
-url_api = "https://api.github.com/repos/cargo-generate/cargo-generate/releases/assets/487655536"
+[tools."github:archetect/archetect"."platforms.windows-x64"]
+checksum = "sha256:3baa05906c4c58bd848a15d0628a202f11fd40e90ceffa32d127322a6e227dff"
+url = "https://github.com/archetect/archetect/releases/download/v3.4.3/archetect-v3.4.3-windows-x86_64.zip"
+url_api = "https://api.github.com/repos/archetect/archetect/releases/assets/502939054"
 
 [[tools.hk]]
 version = "1.55.0"

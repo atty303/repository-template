@@ -5,7 +5,7 @@ actionlint = "1.7.12"
 deno = "2.9.5"
 hk = "1.55.0"
 taplo = "0.10.0"
-"github:cargo-generate/cargo-generate" = "0.23.14"
+"github:archetect/archetect" = "3.4.3"
 
 [env]
 HK_MISE = 1
@@ -39,27 +39,14 @@ exec hk fix --all
 '''
 
 [tasks.generate]
-description = "Generate a repository without prompts"
-run = "deno run --allow-read --allow-run=cargo-generate --allow-write scripts/generate.ts"
-
-[tasks."generate:interactive"]
-description = "Generate a repository interactively"
-run = "cargo-generate generate --path ."
-
-[tasks.sync]
-description = "Synchronize common files into both templates"
-run = "deno run --allow-read --allow-write scripts/sync_shared.ts sync"
-
-[tasks."sync:check"]
-description = "Check that both templates contain the common files"
-run = "deno run --allow-read scripts/sync_shared.ts check"
+description = "Render a repository with Archetect"
+run = "archetect render ."
 
 [tasks.test]
 description = "Run all reproducible checks and generation tests"
-depends = ["check", "sync:check"]
+depends = ["check"]
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
-deno test --allow-read --allow-write scripts
-deno run --allow-env=REPOSITORY_TEMPLATE_MISE --allow-read --allow-run --allow-write scripts/test_generate.ts
+deno run --allow-env=REPOSITORY_TEMPLATE_ARCHETECT,REPOSITORY_TEMPLATE_MISE --allow-read --allow-run=archetect,git,mise --allow-write scripts/test_generate.ts
 '''

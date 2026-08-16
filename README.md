@@ -1,15 +1,17 @@
 # repository-template
 
-A [cargo-generate](https://cargo-generate.github.io/cargo-generate/) collection
-for reproducible, agent-friendly repositories.
+An [Archetect](https://archetect.github.io/) archetype for reproducible,
+agent-friendly repositories.
 
 ## Templates
 
 - `base` provides mise, hk, CI, a dev container, and repository guidance without
   selecting an application language.
-- `deno` adds a typed Deno library, tests, JSR publish validation, and an
-  optional semantic-release workflow.
-- `shared` is the source of truth for files copied into both templates.
+- `deno` adds a typed Deno library, tests, JSR publish validation, and optional
+  semantic-release automation.
+- `shared` is rendered directly into every generated repository.
+- `deno-release` is rendered only when a Deno repository enables
+  `semantic_release`.
 
 ## Setup
 
@@ -20,24 +22,43 @@ mise trust --yes
 mise install --yes
 ```
 
-## Generate without prompts
+## Generate a repository
 
-Agents and automation should use the explicit generation interface:
+The archetype requires `template`, `project_name`, `author`, and `license`.
+`semantic_release` is a Deno-only boolean and defaults to `false`. The generated
+repository is written to `<destination>/<normalized-project-name>`.
+
+Render the local checkout without prompts:
 
 ```sh
-mise run generate -- --name example --template base --license MIT --destination /tmp
+mise run generate -- /tmp --headless -a template=base -a project_name=example -a 'author=Example Author <author@example.com>' -a license=MIT
 ```
+
+For Deno with release automation:
 
 ```sh
-mise run generate -- --name example --template deno --license Apache-2.0 --destination /tmp --semantic-release
+mise run generate -- /tmp --headless -a template=deno -a project_name=example -a 'author=Example Author <author@example.com>' -a license=Apache-2.0 -a semantic_release=true
 ```
 
-`--semantic-release` is valid only for the Deno template. Without it, release
-configuration and release-only tasks are not generated.
+Running `mise run generate -- /tmp` without `--headless` prompts for answers.
+The generation path invokes Archetect directly; Deno is used only by this
+repository's maintenance checks and generation regression tests.
 
-For a human-guided cargo-generate session, run `mise run generate:interactive`.
+Render an immutable GitHub revision with Archetect as the caller's only mise
+tool dependency:
 
-## Maintain the templates
+```sh
+mise exec github:archetect/archetect@3.4.3 -- archetect render 'https://github.com/atty303/repository-template.git#<commit>' /tmp --headless -a template=deno -a project_name=example -a 'author=Example Author <author@example.com>' -a license=Apache-2.0 -a semantic_release=true
+```
+
+Archetect does not initialize Git or execute external commands. Initialize the
+generated repository separately when needed:
+
+```sh
+git -C /tmp/example init --initial-branch=main
+```
+
+## Maintain the archetype
 
 Use the standard validation entrypoints:
 
@@ -47,9 +68,8 @@ mise run fix
 mise run test
 ```
 
-Edit common generated files under `shared/`, then materialize them into both
-templates with `mise run sync`. `mise run sync:check` fails when a template has
-drifted from the shared source.
+Edit common generated files under `shared/`. They are rendered directly, so no
+synchronization step or duplicated copy exists under `base/` or `deno/`.
 
 `mise run test` generates and validates these representative combinations:
 
