@@ -1,21 +1,59 @@
 # repository-template
 
-My personal repository template. Use it via [cargo-generate](https://cargo-generate.github.io/cargo-generate/index.html).
+A [cargo-generate](https://cargo-generate.github.io/cargo-generate/) collection
+for reproducible, agent-friendly repositories.
 
-## Usage
+## Templates
 
-If you run it via mise, you don’t need to install cargo-generate:
+- `base` provides mise, hk, CI, a dev container, and repository guidance without
+  selecting an application language.
+- `deno` adds a typed Deno library, tests, JSR publish validation, and an
+  optional semantic-release workflow.
+- `shared` is the source of truth for files copied into both templates.
 
-```bash
-mise exec github:cargo-generate/cargo-generate -- cargo-generate generate atty303/repository-template
+## Setup
+
+Install [mise](https://mise.jdx.dev/), then bootstrap this repository:
+
+```sh
+mise trust --yes
+mise install --yes
 ```
 
-## Policy
+## Generate without prompts
 
-### base
+Agents and automation should use the explicit generation interface:
 
-- Manage project-specific development tools using [mise](https://mise.jdx.dev/).
-- Manage Git Hooks with [hk](https://hk.jdx.dev/). Run linters through mise.
-- Use devcontainer to unify local and CDE (Codespaces, ONA) environments.
-  The container only depends on mise, so the local environment is nearly
-  identical if mise is available.
+```sh
+mise run generate -- --name example --template base --license MIT --destination /tmp
+```
+
+```sh
+mise run generate -- --name example --template deno --license Apache-2.0 --destination /tmp --semantic-release
+```
+
+`--semantic-release` is valid only for the Deno template. Without it, release
+configuration and release-only tasks are not generated.
+
+For a human-guided cargo-generate session, run `mise run generate:interactive`.
+
+## Maintain the templates
+
+Use the standard validation entrypoints:
+
+```sh
+mise run check
+mise run fix
+mise run test
+```
+
+Edit common generated files under `shared/`, then materialize them into both
+templates with `mise run sync`. `mise run sync:check` fails when a template has
+drifted from the shared source.
+
+`mise run test` generates and validates these representative combinations:
+
+- base with MIT
+- base with Apache-2.0
+- Deno with MIT and no release automation
+- Deno with Apache-2.0 and semantic-release enabled

@@ -1,13 +1,29 @@
 [template]
-cargo_generate_version = ">= 0.23.0"
-ignore = ["cargo-generate-mod.rhai"]
-include = ["LICENSE", "deno.jsonc"]
-
-[hooks]
-init = ["cargo-generate-init.rhai"]
+cargo_generate_version = ">= 0.23.14"
+include = [
+  ".github/workflows/ci.yml",
+  ".github/workflows/release.yml",
+  "AGENTS.md",
+  "LICENSE",
+  "README.md",
+  "deno.jsonc",
+  "mise.toml",
+]
 
 [placeholders.license]
 type = "string"
 prompt = "What license to use?"
-choices = ["MIT"]
+choices = ["MIT", "Apache-2.0"]
 default = "MIT"
+
+[placeholders.semantic_release]
+type = "bool"
+prompt = "Enable semantic-release and automatic JSR publishing?"
+default = false
+
+[conditional.'semantic_release == false']
+ignore = [
+  ".github/workflows/release.yml",
+  ".releaserc.json",
+  "scripts/set_version.ts",
+]

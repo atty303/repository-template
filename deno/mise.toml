@@ -1,0 +1,58 @@
+min_version = "2026.8.6"
+
+[tools]
+actionlint = "1.7.12"
+deno = "2.9.5"
+hk = "1.55.0"
+taplo = "0.10.0"
+
+[env]
+HK_MISE = 1
+
+[hooks]
+postinstall = "hk install --mise"
+
+[tool_config]
+locked = true
+
+[tasks.check]
+description = "Check the repository or selected files"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if (( $# > 0 )); then
+  exec hk check "$@"
+fi
+exec hk check --all
+'''
+
+[tasks.fix]
+description = "Fix the repository or selected files"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+if (( $# > 0 )); then
+  exec hk fix "$@"
+fi
+exec hk fix --all
+'''
+
+[tasks.test]
+description = "Run all reproducible checks"
+depends = ["check"]
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+deno test
+deno publish --dry-run --allow-dirty
+'''
+
+{% if semantic_release %}[tasks.prepare]
+description = "Set the release version (GitHub Actions only)"
+usage = 'flag "--version <version>"'
+run = 'deno run --allow-read=deno.jsonc --allow-write=deno.jsonc scripts/set_version.ts "$usage_version"'
+
+[tasks.publish]
+description = "Publish to JSR (GitHub Actions only)"
+run = "deno publish"
+{% endif %}

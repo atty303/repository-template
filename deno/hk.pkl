@@ -5,22 +5,21 @@ min_hk_version = "1.55.0"
 
 local linters = new Mapping<String, Step> {
   ["actionlint"] = (Builtins.actionlint) {
-    glob = List(".github/workflows/*.yml", ".github/workflows/*.yaml")
     check = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
   }
   ["case-conflict"] = Builtins.check_case_conflict
   ["deno:check"] {
-    glob = "scripts/*.ts"
-    check = new Command { argv = List("deno", "check", "{{files}}") }
+    glob = List("*.js", "*.jsx", "*.mts", "*.ts", "*.tsx")
+    check = new Command { argv = List("deno", "check", "--doc", "{{files}}") }
   }
   ["deno:fmt"] {
-    glob = List("scripts/*.ts", "README.md")
+    glob = List("*.js", "*.jsx", "*.json", "*.jsonc", "*.md", "*.mts", "*.ts", "*.tsx")
     stage = glob
     check = new Command { argv = List("deno", "fmt", "--check", "{{files}}") }
     fix = new Command { argv = List("deno", "fmt", "{{files}}") }
   }
   ["deno:lint"] {
-    glob = "scripts/*.ts"
+    glob = List("*.js", "*.jsx", "*.mts", "*.ts", "*.tsx")
     stage = glob
     check = new Command { argv = List("deno", "lint", "{{files}}") }
     fix = new Command { argv = List("deno", "lint", "--fix", "{{files}}") }
@@ -28,9 +27,7 @@ local linters = new Mapping<String, Step> {
   ["merge-conflict"] = Builtins.check_merge_conflict
   ["mise"] = Builtins.mise
   ["private-key"] = Builtins.detect_private_key
-  ["taplo"] = (Builtins.taplo) {
-    glob = List("mise.toml", "cargo-generate.toml", "base/cargo-generate.toml", "deno/cargo-generate.toml")
-  }
+  ["taplo"] = Builtins.taplo
 }
 
 hooks {
