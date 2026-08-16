@@ -20,6 +20,8 @@ mise run fix
 mise run test
 ```
 
+`mise run fix` applies available fixes without staging the changed files.
+
 Pass selected files after `--`, for example `mise run check -- README.md`.
 
 ## License

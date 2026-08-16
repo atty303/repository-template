@@ -6,35 +6,54 @@ min_hk_version = "1.55.0"
 local linters = new Mapping<String, Step> {
   ["archetect:interface"] {
     glob = List("archetype.lua", "archetype.yaml", "shared/**/*", "base/**/*", "deno/**/*", "deno-release/**/*")
-    check = new Command { argv = List("archetect", "interface", ".", "--json", "--explore") }
+    check = new CommandSpec {
+      command = new Command { argv = List("archetect", "interface", ".", "--json", "--explore") }
+      effect = "read"
+    }
   }
   ["actionlint"] = (Builtins.actionlint) {
     glob = List(".github/workflows/*.yml", ".github/workflows/*.yaml")
-    check = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
+      effect = "read"
+    }
   }
   ["case-conflict"] = Builtins.check_case_conflict
   ["deno:check"] {
     glob = "scripts/*.ts"
-    check = new Command { argv = List("deno", "check", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("deno", "check", "{{files}}") }
+      effect = "read"
+    }
   }
   ["deno:fmt"] {
     glob = List("scripts/*.ts", "README.md")
     stage = glob
-    check = new Command { argv = List("deno", "fmt", "--check", "{{files}}") }
-    fix = new Command { argv = List("deno", "fmt", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("deno", "fmt", "--check", "{{files}}") }
+      effect = "read"
+    }
+    fix = new CommandSpec {
+      command = new Command { argv = List("deno", "fmt", "{{files}}") }
+      effect = "write"
+    }
   }
   ["deno:lint"] {
     glob = "scripts/*.ts"
     stage = glob
-    check = new Command { argv = List("deno", "lint", "{{files}}") }
-    fix = new Command { argv = List("deno", "lint", "--fix", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("deno", "lint", "{{files}}") }
+      effect = "read"
+    }
+    fix = new CommandSpec {
+      command = new Command { argv = List("deno", "lint", "--fix", "{{files}}") }
+      effect = "write"
+    }
   }
   ["merge-conflict"] = Builtins.check_merge_conflict
   ["mise"] = Builtins.mise
   ["private-key"] = Builtins.detect_private_key
-  ["taplo"] = (Builtins.taplo) {
-    glob = "mise.toml"
-  }
+  ["taplo"] = (Builtins.taplo) { glob = List(".codex/config.toml", "mise.toml") }
 }
 
 hooks {

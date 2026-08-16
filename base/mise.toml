@@ -20,20 +20,20 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 if (( $# > 0 )); then
-  exec hk check "$@"
+  exec hk check --safe -- "$@"
 fi
-exec hk check --all
+exec hk check --all --safe
 '''
 
 [tasks.fix]
-description = "Fix the repository or selected files"
+description = "Fix the repository or selected files without staging changes"
 run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 if (( $# > 0 )); then
-  exec hk fix "$@"
+  exec hk fix --safe --no-stage -- "$@"
 fi
-exec hk fix --all
+exec hk fix --all --safe --no-stage
 '''
 
 [tasks.test]

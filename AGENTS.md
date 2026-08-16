@@ -49,8 +49,21 @@ Bootstrap the pinned development tools with `mise trust --yes` and
   `archetect render .`.
 - `mise run check [-- PATHS...]` runs non-mutating formatting, lint, manifest,
   and Archetect interface checks.
-- `mise run fix [-- PATHS...]` applies available formatting and lint fixes.
+- `mise run fix [-- PATHS...]` safely applies available formatting and lint
+  fixes without staging changes.
 - `mise run test` runs all reproducible checks and generation E2E tests.
+
+Agents should use fix-first feedback during development. When hk MCP is
+available, inspect the project and plan, then call `start_safe_fix` without a
+preliminary check or diff. Otherwise, call `mise run fix` directly. On a
+successful fix with no remaining diagnostics, continue without inspecting the
+diff. Inspect logs and the diff only when autofix fails, leaves diagnostics,
+reports a parser warning, or may have applied a partial change; after manual
+repairs, run fix again instead of switching to check. Use `mise run check` or
+`start_safe_check` only when explicitly asked for non-mutating verification or
+when fix cannot be used diagnostically. Never bypass a safe refusal with an
+unrestricted MCP tool or direct `hk` invocation. Run `mise run test` once as
+the final verification.
 
 Treat `mise.toml` as the tool-version source and update committed lockfiles
 through mise rather than by hand. Treat `hk.pkl` as the source of truth for

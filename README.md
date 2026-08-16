@@ -68,6 +68,8 @@ mise run fix
 mise run test
 ```
 
+`mise run fix` applies available fixes without staging the changed files.
+
 Edit common generated files under `shared/`. They are rendered directly, so no
 synchronization step or duplicated copy exists under `base/` or `deno/`.
 

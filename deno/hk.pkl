@@ -5,24 +5,42 @@ min_hk_version = "1.55.0"
 
 local linters = new Mapping<String, Step> {
   ["actionlint"] = (Builtins.actionlint) {
-    check = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("actionlint", "-shellcheck=", "{{files}}") }
+      effect = "read"
+    }
   }
   ["case-conflict"] = Builtins.check_case_conflict
   ["deno:check"] {
     glob = List("*.js", "*.jsx", "*.mts", "*.ts", "*.tsx")
-    check = new Command { argv = List("deno", "check", "--doc", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("deno", "check", "--doc", "{{files}}") }
+      effect = "read"
+    }
   }
   ["deno:fmt"] {
     glob = List("*.js", "*.jsx", "*.json", "*.jsonc", "*.md", "*.mts", "*.ts", "*.tsx")
     stage = glob
-    check = new Command { argv = List("deno", "fmt", "--check", "{{files}}") }
-    fix = new Command { argv = List("deno", "fmt", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("deno", "fmt", "--check", "{{files}}") }
+      effect = "read"
+    }
+    fix = new CommandSpec {
+      command = new Command { argv = List("deno", "fmt", "{{files}}") }
+      effect = "write"
+    }
   }
   ["deno:lint"] {
     glob = List("*.js", "*.jsx", "*.mts", "*.ts", "*.tsx")
     stage = glob
-    check = new Command { argv = List("deno", "lint", "{{files}}") }
-    fix = new Command { argv = List("deno", "lint", "--fix", "{{files}}") }
+    check = new CommandSpec {
+      command = new Command { argv = List("deno", "lint", "{{files}}") }
+      effect = "read"
+    }
+    fix = new CommandSpec {
+      command = new Command { argv = List("deno", "lint", "--fix", "{{files}}") }
+      effect = "write"
+    }
   }
   ["merge-conflict"] = Builtins.check_merge_conflict
   ["mise"] = Builtins.mise
