@@ -6,7 +6,12 @@ import semanticRelease from "semantic-release";
 import * as commitAnalyzer from "@semantic-release/commit-analyzer";
 import * as releaseNotesGenerator from "@semantic-release/release-notes-generator";
 import * as githubPlugin from "@semantic-release/github";
-import { resetArtifactDirectory, validateArtifacts } from "./artifacts.ts";
+import {
+  type LocalArtifact,
+  resetArtifactDirectory,
+  validateArtifacts,
+  verifyPublishedArtifacts,
+} from "./artifacts.ts";
 import { filterReleaseCommits, RELEASE_RULES } from "./commits.ts";
 import { createLocalTag, currentHead, deleteLocalTagIfPresent, git } from "./git.ts";
 import type { GitHubApi } from "./github.ts";
@@ -126,6 +131,7 @@ export async function runSemanticRelease(options: {
     },
   });
   let artifactNames: string[] = [];
+  let artifacts: LocalArtifact[] = [];
   let registryPublished = false;
   const releaseOwner = randomUUID();
   const releaseMarker = `repository-template-release-owner:${releaseOwner}`;
@@ -173,13 +179,14 @@ export async function runSemanticRelease(options: {
           "release:build created a commit; release tags must point to the input main commit.",
         );
       }
-      artifactNames = await validateArtifacts(options.artifactDirectory);
+      artifacts = await validateArtifacts(options.artifactDirectory);
+      artifactNames = artifacts.map(({ name }) => name);
       await options.state.setArtifacts(artifactNames);
       await createOwnedTag(options.api, options.state, {
         name: context.nextRelease.gitTag,
         sha: context.nextRelease.gitHead,
       });
-      core.info(`Validated ${artifactNames.length} release files including SHA256SUMS.`);
+      core.info(`Validated ${artifactNames.length} release files.`);
     });
   });
 
@@ -227,6 +234,8 @@ export async function runSemanticRelease(options: {
         throw new ReleaseError("github_release_failed", "GitHub publish did not return a release ID.");
       }
       await options.state.confirmRelease(release.id);
+      verifyPublishedArtifacts(artifacts, await options.api.releaseAssets(release.id));
+      core.info(`Verified ${artifactNames.length} GitHub Release asset digests.`);
       return release;
     } catch (error) {
       throw releaseError(error, "github_release_failed");

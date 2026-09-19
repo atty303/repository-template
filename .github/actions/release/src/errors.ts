@@ -7,6 +7,7 @@ export type ErrorCode =
   | "build_task_missing"
   | "build_failed"
   | "artifact_invalid"
+  | "artifact_verification_failed"
   | "registry_publish_failed"
   | "github_release_failed"
   | "rollback_incomplete";

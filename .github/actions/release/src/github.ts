@@ -13,6 +13,13 @@ export interface GitHubRelease {
   body: string;
 }
 
+export interface GitHubReleaseAsset {
+  name: string;
+  size: number;
+  digest: string | null;
+  state: string;
+}
+
 export function releaseVersionMode(body: string): Versioning | undefined {
   const match = /<!-- repository-template-release-owner:[^ ]+ versioning:(semver|calver) -->\s*$/u.exec(body);
   return match?.[1] === "semver" || match?.[1] === "calver" ? match[1] : undefined;
@@ -78,6 +85,25 @@ export class GitHubApi {
 
   async deleteRelease(releaseId: number): Promise<void> {
     await this.octokit.rest.repos.deleteRelease({ ...this.repository, release_id: releaseId });
+  }
+
+  async releaseAssets(releaseId: number): Promise<GitHubReleaseAsset[]> {
+    const assets: GitHubReleaseAsset[] = [];
+    for (let page = 1;; page += 1) {
+      const response = await this.octokit.rest.repos.listReleaseAssets({
+        ...this.repository,
+        release_id: releaseId,
+        per_page: 100,
+        page,
+      });
+      assets.push(...response.data.map(({ name, size, digest, state }) => ({
+        name,
+        size,
+        digest,
+        state,
+      })));
+      if (response.data.length < 100) return assets;
+    }
   }
 
   async releaseVersionModes(): Promise<Versioning[]> {

@@ -34498,6 +34498,25 @@ class GitHubApi {
     async deleteRelease(releaseId) {
         await this.octokit.rest.repos.deleteRelease({ ...this.repository, release_id: releaseId });
     }
+    async releaseAssets(releaseId) {
+        const assets = [];
+        for (let page = 1;; page += 1) {
+            const response = await this.octokit.rest.repos.listReleaseAssets({
+                ...this.repository,
+                release_id: releaseId,
+                per_page: 100,
+                page,
+            });
+            assets.push(...response.data.map(({ name, size, digest, state }) => ({
+                name,
+                size,
+                digest,
+                state,
+            })));
+            if (response.data.length < 100)
+                return assets;
+        }
+    }
     async releaseVersionModes() {
         const modes = [];
         for (let page = 1;; page += 1) {
@@ -142460,19 +142479,51 @@ async function validateArtifacts(directory) {
         if (!entry.isFile() || entry.isSymbolicLink()) {
             throw new ReleaseError("artifact_invalid", `Artifact ${entry.name} is not a direct regular file.`);
         }
-        if (entry.name === "SHA256SUMS" || entry.name.includes("\n") || entry.name.includes("\r")) {
-            throw new ReleaseError("artifact_invalid", `Artifact name ${JSON.stringify(entry.name)} is reserved or unsafe.`);
+        if (entry.name.includes("\n") || entry.name.includes("\r")) {
+            throw new ReleaseError("artifact_invalid", `Artifact name ${JSON.stringify(entry.name)} is unsafe.`);
         }
         names.push(entry.name);
     }
     names.sort();
-    const sums = [];
+    const artifacts = [];
     for (const name of names) {
-        const digest = createHash("sha256").update(await readFile(join(directory, name))).digest("hex");
-        sums.push(`${digest}  ${name}`);
+        const contents = await readFile(join(directory, name));
+        artifacts.push({
+            name,
+            size: contents.byteLength,
+            digest: `sha256:${createHash("sha256").update(contents).digest("hex")}`,
+        });
     }
-    await writeFile$1(join(directory, "SHA256SUMS"), `${sums.join("\n")}\n`, { encoding: "utf8", flag: "wx" });
-    return [...names, "SHA256SUMS"];
+    return artifacts;
+}
+function verifyPublishedArtifacts(local, published) {
+    const remoteByName = new Map();
+    for (const artifact of published) {
+        if (remoteByName.has(artifact.name)) {
+            throw new ReleaseError("artifact_verification_failed", `GitHub Release contains duplicate asset ${JSON.stringify(artifact.name)}.`);
+        }
+        remoteByName.set(artifact.name, artifact);
+    }
+    const expectedNames = new Set(local.map(({ name }) => name));
+    const unexpected = [...remoteByName.keys()].filter((name) => !expectedNames.has(name)).sort();
+    if (unexpected.length > 0) {
+        throw new ReleaseError("artifact_verification_failed", `GitHub Release contains unexpected assets: ${unexpected.join(", ")}.`);
+    }
+    for (const expected of local) {
+        const actual = remoteByName.get(expected.name);
+        if (!actual) {
+            throw new ReleaseError("artifact_verification_failed", `GitHub Release is missing asset ${JSON.stringify(expected.name)}.`);
+        }
+        if (actual.state !== "uploaded") {
+            throw new ReleaseError("artifact_verification_failed", `GitHub Release asset ${JSON.stringify(expected.name)} is in state ${JSON.stringify(actual.state)}.`);
+        }
+        if (actual.size !== expected.size) {
+            throw new ReleaseError("artifact_verification_failed", `GitHub Release asset ${JSON.stringify(expected.name)} has size ${actual.size}; expected ${expected.size}.`);
+        }
+        if (actual.digest?.toLowerCase() !== expected.digest) {
+            throw new ReleaseError("artifact_verification_failed", `GitHub Release asset ${JSON.stringify(expected.name)} has digest ${actual.digest ?? "<missing>"}; expected ${expected.digest}.`);
+        }
+    }
 }
 
 const SUPPORTED_TYPES = new Set([
@@ -142627,6 +142678,7 @@ async function runSemanticRelease(options) {
         },
     });
     let artifactNames = [];
+    let artifacts = [];
     let registryPublished = false;
     const releaseOwner = randomUUID();
     const releaseMarker = `repository-template-release-owner:${releaseOwner}`;
@@ -142659,13 +142711,14 @@ async function runSemanticRelease(options) {
             if (await currentHead(options.root) !== before) {
                 throw new ReleaseError("build_failed", "release:build created a commit; release tags must point to the input main commit.");
             }
-            artifactNames = await validateArtifacts(options.artifactDirectory);
+            artifacts = await validateArtifacts(options.artifactDirectory);
+            artifactNames = artifacts.map(({ name }) => name);
             await options.state.setArtifacts(artifactNames);
             await createOwnedTag(options.api, options.state, {
                 name: context.nextRelease.gitTag,
                 sha: context.nextRelease.gitHead,
             });
-            info(`Validated ${artifactNames.length} release files including SHA256SUMS.`);
+            info(`Validated ${artifactNames.length} release files.`);
         });
     });
     const publishRegistry = named("mise-release-publish", async (_pluginOptions, context) => {
@@ -142707,6 +142760,8 @@ async function runSemanticRelease(options) {
                 throw new ReleaseError("github_release_failed", "GitHub publish did not return a release ID.");
             }
             await options.state.confirmRelease(release.id);
+            verifyPublishedArtifacts(artifacts, await options.api.releaseAssets(release.id));
+            info(`Verified ${artifactNames.length} GitHub Release asset digests.`);
             return release;
         }
         catch (error) {

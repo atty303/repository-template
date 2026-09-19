@@ -87,8 +87,12 @@ output_directory="$2"
 
 The action removes `.release/artifacts` before the task runs. The task must
 produce at least one direct regular file there. Directories, symbolic links, and
-an artifact named `SHA256SUMS` are rejected. The action generates a sorted
-`SHA256SUMS` and uploads every resulting file.
+unsafe filenames are rejected. The action computes each file's SHA-256 digest in
+memory, uploads exactly those files, and verifies the GitHub-hosted asset state,
+size, and server-reported digest before reporting success. It does not create or
+require checksum files; only files produced by the caller are uploaded. A
+missing or mismatched digest fails the release and enters the normal
+ownership-aware rollback path.
 
 The task may modify its working copy to inject the release version, but it must
 not create a commit. The release tag intentionally points at the input default
@@ -178,6 +182,7 @@ The action performs no changelog or source-tree writeback. Its order is:
    semantic-release record its local tag and note;
 4. run optional `release:publish`;
 5. create the non-draft, non-prerelease GitHub Release and upload artifacts.
+6. verify the uploaded asset set, sizes, and GitHub-reported SHA-256 digests.
 
 On failure it removes only the GitHub Release and tags that the current run
 established ownership of. Release ownership is confirmed with a unique hidden
