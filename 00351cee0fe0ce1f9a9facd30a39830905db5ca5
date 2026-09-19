@@ -1,0 +1,12 @@
+Task: stop generating checksum files and verify hosted release asset digests
+Anchor: 00351cee0fe0ce1f9a9facd30a39830905db5ca5
+Base: 16aaaafee2e5921602a9a3690717881a2bf5d272
+Worktree: main
+Commits: 00351cee0fe0ce1f9a9facd30a39830905db5ca5 implements in-memory local hashing and post-upload GitHub asset verification
+Guidance: repository AGENTS.md; develop-repository; design-program-observability; investigate-problem; review
+Environment: durable generic GitHub Action; GitHub is the external state and metadata boundary; no push or release was authorized in this cycle
+Evidence: release action tests 27/27 passed; TypeScript and bundle consistency passed; full repository test passed; fresh independent review reported no actionable findings
+Authority: current action source, tests, bundled dist/index.js, and docs/release-action.md define the release contract
+Transcript:
+- U1: SHA256SUMと.sha256を作りたくない。この方針で改善して
+  - A: Replaced generated SHA256SUMS with in-memory SHA-256 and size metadata, uploaded only caller-produced files, listed all GitHub Release assets after publish, and required exact name, uploaded state, size, and server digest matches before success. Added a stable artifact_verification_failed error that retains the existing ownership-aware rollback path, updated tests/docs/bundle, verified the repository, obtained a fresh review, and committed locally. Confirmed from official cargo-dist documentation that checksum = "false" disables checksum output for the Scorepeek caller. No remote release was created, so live GitHub digest timing and rollback remain unverified.
