@@ -17,7 +17,7 @@ test("semantic-release accepts bundled direct lifecycle functions", async (conte
     await rm(root, { recursive: true, force: true });
     await rm(remote, { recursive: true, force: true });
   });
-  await runCommand("git", ["init", "--bare"], { cwd: remote });
+  await runCommand("git", ["init", "--bare", "--initial-branch=main"], { cwd: remote });
   await runCommand("git", ["init", "--initial-branch=main"], { cwd: root });
   await runCommand("git", ["config", "user.name", "Release Test"], { cwd: root });
   await runCommand("git", ["config", "user.email", "release@example.invalid"], { cwd: root });
