@@ -1,0 +1,196 @@
+Task: generic release workflow design and implementation
+Anchor: c03ba67d1f2f7da859a8f569d697666a4f179131
+Base: 9c29ea79e211516f066d0c3447da4d1bcf798ec2
+Workline: jj change mpvoutsnuwwzxrvskrontwppsuquxtyl on main
+Commits: c03ba67d1f2f7da859a8f569d697666a4f179131 implements the complete generic release action
+Guidance: repository AGENTS.md; dig; develop-repository; design-program-observability; review
+Environment: durable local implementation in atty303/repository-template; no push, deployment, GitHub Release, or registry publication; Archetect render tree intentionally untouched
+Evidence: mise run check passed; mise run test passed including 21 release-action tests, real mise monorepo root-task execution, isolated Node bundle startup, and unchanged Archetect generation tests; two fresh reviews completed and final delta review was clean
+Authority: current source, tests, and docs at the anchor commit are authoritative
+Transcript:
+- U1: [$dig](/var/home/atty/.agents/skills/dig/SKILL.md) release workflowを整備したい。date versioningにしたい
+  - A: dig skillを開始し、release workflowの目的とversioning方針を一問ずつ確認した。
+- U2: 基本Cにしたいが、採用するactionsの仕様に自然にあわせたい
+  - A: GitHub Actionsと採用toolの自然な責務分担を前提に選択肢を整理した。
+- U3: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U4: cargo-distでgithub release作成までやろうとしてる？
+  - A: cargo-distとrelease controllerのGitHub操作責務を切り分けて確認した。
+- U5: B
+  - A: 選択を記録し、次の設計論点を提示した。
+- U6: D
+  - A: 選択を記録し、次の設計論点を提示した。
+- U7: 今後の他repoにも使える汎用release workflowにする。cargoに特化しない。semantics/date versioningの両方をrepoで選べるようにする。release prがあってもいい。mainをすべてreleaseするのは必須ではない。repoごとに個別のworkflowを考えたくないのでここで一般化する。date versionigはライブラリでなくアプリで採用したいが、無理があるならsemantics versionでもいい
+  - A: 汎用化、repo単位のSemVer/CalVer選択、release判定とrelease PRの要否を設計軸として整理した。
+- U8: tagprよさそうだが、こっちでも比較したいから他の候補を出して
+  - A: tagpr以外の候補を比較できるように提示した。
+- U9:
+    - `semantic-release` は過去使っていて結構満足していた。ただcalverができなかった。
+    - 個人repoなのでpr mergeではなくmain pushで開発を進めることも多い。prだけでなくcommit logからrelease notesを作れる必要がある
+    - release管理に労力を割きたくない
+    - ユーザーはfixを迅速に入手したいだろう。しかし1日に何回もリリースはしたくない
+    - release notesはユーザーに意味のあるものにしたい
+    - libraryはsemverで確定。lib apiがあるからsemverの意味がある。appはcalverがわかりやすいが、semverでも妥協できる。
+
+    こんな要求だ
+  - A: commit log中心、低運用負荷、迅速だが過頻度でないrelease、利用者向けnotes、library/app別versioningを要件化した。
+- U10: tagprの全面採用する場合はどうなる？
+  - A: tagpr全面採用時の運用とtrade-offを説明した。
+- U11: semantics-release/tagprを比較して
+  - A: semantic-releaseとtagprを要求に沿って比較した。
+- U12: semantic-releaseでcalverにするコストはどんなもん？大したことなさそうだけど
+  - A: semantic-releaseへCalVerを組み込む実装・保守コストを分解した。
+- U13: B
+  - A: 選択を記録し、次の設計論点を提示した。
+- U14: C
+  - A: 選択を記録し、次の設計論点を提示した。
+- U15: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U16: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U17: Bは具体的なpluginがあるの？
+  - A: 候補pluginの具体性と標準からの差を確認した。
+- U18: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U19: A. このreleaseからのrepoへの書き戻しは気になる。semantic-releaseは書き戻しなしを推奨していたはず。どうあるべきか？
+  - A: source/changelogへの書き戻しを行わない方針とbuild時version注入を整理した。
+- U20: release build中はworking copyだけversion変更するってことね。そのversionのcommitを使うものだと思っていたが、別にmainのcommitでいいのか。commitせずにdrity copyだとbuildできないecosystemとかない？
+  - A: main commitをrelease tag対象とし、dirty working copyでversion注入するecosystem上の制約を説明した。
+- U21: ちなみにversionだけ変えたtagをmainとはcommitしてそこでリリースビルドするのは？
+  - A: version-only commit/tag案とmain commitを直接tag付けする案を比較した。
+- U22: A
+  - A: main commitをrelease対象にする選択を記録した。
+- U23: cargo-distにgithub操作させたくない。semantic-releaseがmise taskを起動し、ローカルのartifactをreleaseに公開する
+  - A: semantic-releaseをcontroller、mise taskをbuild/publish adapterとする責務分担を確定した。
+- U24: A. ところでbuildをmatrixにすることはできる？けっこうmult platformにしたいことはあるがどの程度複雑になるのか
+  - A: semantic-release lifecycleとmulti-platform matrixの分離方法を検討した。
+- U25: C. singleから後で自然に拡張できそうだ
+  - A: 初期single runnerから後でmatrixへ拡張できる方針を記録した。
+- U26: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U27: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U28: A. registry-publishは設定ではなくmise taskの宣言で判定する
+  - A: optional registry publishをmise task存在で判定する契約を確定した。
+- U29: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U30: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U31: A. atty303/repository-templateを置き場にする
+  - A: central actionの配置先をrepository-templateに確定した。
+- U32: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U33: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U34: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U35: D. どのぐらい標準から外れる？
+  - A: semantic-release標準との差分と保守負担を説明した。
+- U36: tagなしなら迂回せず0.1.0 tagを作る事前処理ぐらいなら大したことないのでは？ 初回が0.1.1になるのは別にいい。1.0.0は安定が期待されるから初期値にはしたくない
+  - A: bootstrap tagによる初回version計算を検討した。
+- U37: A. 別に終了せずに実行継続すればいい。終了しないといけない理由ある？
+  - A: bootstrap tag作成後も同runでrelease分析を継続する方針を確定した。
+- U38: 0.1.0はmainのinitial commitにつける。そうすると初回リリースもされる。それを0.0.0にするとsemantic releaseのversion bumpが壊れる？壊れないなら0.0.0がいい
+  - A: neutralなv0.0.0 bootstrapがsemantic-releaseのbumpを壊さないことを確認した。
+- U39: A
+  - A: v0.0.0 bootstrap方針を記録した。
+- U40: calverのbootstrap tagは？ initial commitの日付でいいと思うが
+  - A: SemVer/CalVer共通のneutral bootstrapと日付由来案を比較した。
+- U41: A
+  - A: 共通v0.0.0 bootstrapを選択した。
+- U42: A. bootstrapでない月の最初は1ね
+  - A: CalVer monthly counter初期値を一旦1として記録した。
+- U43: やっぱcounter初期値は0でいい
+  - A: CalVerをYYYY.M.0開始へ更新した。
+- U44: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U45: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U46: C
+  - A: 選択を記録し、次の設計論点を提示した。
+- U47: registry secretはcaller側でfnoxから取り出す。actions secretに依存しない。FNOX\_AGE\_KEYだけ渡ればいい
+  - A: credential解決をcallerのfnox側へ置く設計を整理した。
+- U48: FNOX\_AGE\_KEY環境変数にsecretを注入する設定自体をreusable workflowのwithに書けないのか？
+  - A: reusable workflow inputとsecret/env境界を説明した。
+- U49: FNOX\_AGE\_KEYの名前がハードコードなのが気になる
+  - A: central actionがregistry credential名を知らない汎用env契約へ変更した。
+- U50: A
+  - A: arbitrary caller env方針を記録した。
+- U51: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U52: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U53: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U54: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U55: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U56: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U57: A. sparse checkoutできる構成にすること
+  - A: actionを自己完結directoryへ置き、必要範囲だけ取得できる構成を要件化した。
+- U58: releaseの直下にtestsも置くとcall時に不要なcheckoutにならないか？ file単位でwhitelist checkoutするか？
+  - A: remote JavaScript actionの取得単位とtests同居のtrade-offを説明した。
+- U59: A
+  - A: action directory内にsource/tests/bundleをまとめる構成を記録した。
+- U60: D. mise versionはcallerごとに違うケースのほうが多い
+  - A: callerがmise versionとsetupを所有する方針を確定した。
+- U61: 別jobじゃなくてusesの前stepでいいだろ
+  - A: caller workflowの同一job内でmise setupしてactionを呼ぶ構成へ整理した。
+- U62: mise-actionの設定をカスタムしたり、forkを使うこともある。
+  - A: mise-actionの選択・設定・forkをcaller所有とする理由を記録した。
+- U63: A.こっちのほうが credentialも素直に使えるし、reusableにする必要性がないと思う
+  - A: reusable workflowではなくJavaScript actionを採用する判断を確定した。
+- U64: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U65: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U66: matrixはgithub matrixが使えないからworkflow\_dispatchにするのでは？ それなら1 composite actionでは？
+  - A: phase分割せずcaller taskからworkflow_dispatchを同期利用する設計を再確認した。
+- U67: いや、semantics-releaseをphase分割するのが難しいからworkflow\_dispatchでmatrix再現するって言ってたじゃないか
+  - A: 認識違いを訂正し、single controllerからcaller-owned matrix workflowを同期dispatchする方針へ戻した。
+- U68: D. 速度重視
+  - A: 初期版はsingle ubuntu controllerを速度優先で実装する選択を記録した。
+- U69: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U70: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U71: B
+  - A: 選択を記録し、次の設計論点を提示した。
+- U72: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U73: D
+  - A: 選択を記録し、次の設計論点を提示した。
+- U74: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U75: C
+  - A: 選択を記録し、次の設計論点を提示した。
+- U76: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U77: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U78: C
+  - A: 選択を記録し、次の設計論点を提示した。
+- U79: 一旦docに書くだけでいい。template化はあとでやる
+  - A: caller workflowは文書例だけにし、template生成は後続へ分離した。
+- U80: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U81: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U82: docに書くのはcaller workflowのtemplateの話だぞ
+  - A: 文書化対象がcaller workflow例であることを訂正して確定した。
+- U83: A
+  - A: 選択を記録し、次の設計論点を提示した。
+- U84: A
+  - A: 選択を記録し、実装可能な設計へ収束した。
+- U85: archetectのほうはタッチしないでいい。後で保守するから
+  - A: Archetect render treeを変更対象外とした。
+- U86: 実行して。なお、callerのmise taskがmonorepo root tasksだったときの対応・確認も含めること
+  - A: durable実装を開始し、実miseを使うmonorepo root task検証を含めた。
+- U87: miseにmonorepo\_root = trueを設定するとtaskの名前書式が変わるからそのことを言っている
+  - A: `//:release:build`形式だけをroot taskとして選び、package child taskを除外する実装・testへ具体化した。
+- U88: ok
+  - A: review修正、文書更新、full check/test、fresh reviewを完了し、ローカルcommitを作成した。commit messageのshell escaping問題を検出し、直接のjj description修正には明示承認が必要と報告した。
+- U89: ok
+  - A: 直前commitのdescriptionだけを正しい複数行へ修正し、最終snapshotでworking copyが空、anchor commitがc03ba67dであることを確認した。
