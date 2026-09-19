@@ -133,9 +133,13 @@ or initiating development command was inside a package directory.
 
 ## Version and release behavior
 
-On the first run without a reachable release tag, the action creates `v0.0.0` on
-the first-parent initial commit. This neutral bootstrap tag has no GitHub
-Release or artifacts, and the same run continues through release analysis.
+On the first run without a reachable release tag, the action creates a
+lightweight `v0.0.0` on the first-parent initial commit in the runner's working
+copy. This neutral bootstrap tag lets the same run analyze the complete commit
+history without requiring an elevated credential. It is removed before
+semantic-release pushes tags, so it never appears in the remote repository and
+has no GitHub Release or artifacts. The first durable tag is the real release
+tag on the input default-branch commit.
 
 After the first real release, the selected mode is immutable:
 

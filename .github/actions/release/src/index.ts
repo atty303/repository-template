@@ -12,7 +12,6 @@ import {
 import { GitHubApi } from "./github.ts";
 import { findReleaseTasks } from "./mise.ts";
 import { ReleaseError, releaseError } from "./errors.ts";
-import { createOwnedTag } from "./ownership.ts";
 import { runSemanticRelease } from "./semantic.ts";
 import { rollback, StateStore } from "./state.ts";
 import { assertVersionMode, type Versioning } from "./versioning.ts";
@@ -23,12 +22,12 @@ function branchName(env: NodeJS.ProcessEnv): string | undefined {
   return env.GITHUB_REF_NAME ?? env.GITHUB_REF?.replace(/^refs\/heads\//, "");
 }
 
-async function ensureBootstrapTag(root: string, api: GitHubApi, store: StateStore): Promise<void> {
+async function ensureBootstrapTag(root: string): Promise<string | undefined> {
   const bootstrap = await bootstrapTagTarget(root);
-  if (!bootstrap) return;
-  await createOwnedTag(api, store, bootstrap);
+  if (!bootstrap) return undefined;
   await createLocalTag(root, bootstrap.name, bootstrap.sha);
-  core.info(`Created bootstrap tag ${bootstrap.name} on the first-parent initial commit.`);
+  core.info(`Created transient local bootstrap tag ${bootstrap.name} on the first-parent initial commit.`);
+  return bootstrap.name;
 }
 
 async function failureSummary(error: ReleaseError, rollbackError?: ReleaseError): Promise<void> {
@@ -94,10 +93,11 @@ async function main(): Promise<void> {
     );
     await store.initialize();
     const releaseEnv = { ...process.env, GITHUB_TOKEN: token, GH_TOKEN: token };
+    let transientBootstrapTag: string | undefined;
 
     await core.group("Synchronize release history", async () => {
       await syncHistory(root, defaultBranch, token, process.env.GITHUB_SERVER_URL ?? "https://github.com");
-      await ensureBootstrapTag(root, api!, store!);
+      transientBootstrapTag = await ensureBootstrapTag(root);
     });
 
     const tags = await reachableVersionTags(root);
@@ -119,6 +119,7 @@ async function main(): Promise<void> {
       env: releaseEnv,
       api,
       state: store,
+      transientBootstrapTag,
     });
     try {
       await successSummary(result);

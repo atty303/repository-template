@@ -79,3 +79,11 @@ export async function createLocalTag(root: string, name: string, sha: string): P
     throw new ReleaseError("git_sync_failed", `Unable to create local tag ${name}.`, { cause: error });
   }
 }
+
+export async function deleteLocalTag(root: string, name: string): Promise<void> {
+  try {
+    await git(root, ["tag", "--delete", name]);
+  } catch (error) {
+    throw new ReleaseError("git_sync_failed", `Unable to delete transient local tag ${name}.`, { cause: error });
+  }
+}

@@ -8,7 +8,7 @@ import * as releaseNotesGenerator from "@semantic-release/release-notes-generato
 import * as githubPlugin from "@semantic-release/github";
 import { resetArtifactDirectory, validateArtifacts } from "./artifacts.ts";
 import { filterReleaseCommits, RELEASE_RULES } from "./commits.ts";
-import { currentHead } from "./git.ts";
+import { currentHead, deleteLocalTag } from "./git.ts";
 import type { GitHubApi } from "./github.ts";
 import { runReleaseTask } from "./mise.ts";
 import { createOwnedTag } from "./ownership.ts";
@@ -46,6 +46,10 @@ function named<T extends (...args: any[]) => any>(name: string, plugin: T): T {
   return plugin;
 }
 
+export async function removeTransientBootstrapTag(root: string, tag: string | undefined): Promise<void> {
+  if (tag) await deleteLocalTag(root, tag);
+}
+
 export async function runSemanticRelease(options: {
   root: string;
   defaultBranch: string;
@@ -57,6 +61,7 @@ export async function runSemanticRelease(options: {
   env: NodeJS.ProcessEnv;
   api: GitHubApi;
   state: StateStore;
+  transientBootstrapTag?: string | undefined;
 }): Promise<ReleaseResult> {
   let semanticLog = "";
   const sink = new Writable({
@@ -81,6 +86,7 @@ export async function runSemanticRelease(options: {
       context.nextRelease.gitTag = `v${context.nextRelease.version}`;
       context.nextRelease.name = context.nextRelease.gitTag;
     }
+    await removeTransientBootstrapTag(options.root, options.transientBootstrapTag);
   });
 
   const generateNotes = named("release-notes", async (pluginOptions: unknown, context: PluginContext) => {

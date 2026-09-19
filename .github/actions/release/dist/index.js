@@ -29056,6 +29056,14 @@ async function createLocalTag(root, name, sha) {
         throw new ReleaseError("git_sync_failed", `Unable to create local tag ${name}.`, { cause: error });
     }
 }
+async function deleteLocalTag(root, name) {
+    try {
+        await git$1(root, ["tag", "--delete", name]);
+    }
+    catch (error) {
+        throw new ReleaseError("git_sync_failed", `Unable to delete transient local tag ${name}.`, { cause: error });
+    }
+}
 
 class Context {
     /**
@@ -34510,43 +34518,6 @@ async function runReleaseTask(root, task, version, artifactDirectory, env) {
         env: { ...env, RELEASE_VERSION: version, RELEASE_ARTIFACT_DIR: artifactDirectory },
         stream: true,
     });
-}
-
-function statusOf(error) {
-    return typeof error === "object" && error && "status" in error && typeof error.status === "number"
-        ? error.status
-        : undefined;
-}
-function apiFailureDetail(error) {
-    if (typeof error !== "object" || !error)
-        return String(error);
-    const status = statusOf(error);
-    const message = "message" in error && typeof error.message === "string" ? error.message : undefined;
-    const response = "response" in error && typeof error.response === "object" && error.response
-        ? error.response
-        : undefined;
-    const headers = response && "headers" in response && typeof response.headers === "object" && response.headers
-        ? response.headers
-        : undefined;
-    const requestId = headers && "x-github-request-id" in headers &&
-        typeof headers["x-github-request-id"] === "string"
-        ? headers["x-github-request-id"]
-        : undefined;
-    return [status === undefined ? undefined : `HTTP ${status}`, message, requestId ? `request ${requestId}` : undefined]
-        .filter(Boolean)
-        .join("; ") || "unknown GitHub API failure";
-}
-async function createOwnedTag(api, state, tag) {
-    await state.beginTag(tag);
-    try {
-        await api.createRef(`tags/${tag.name}`, tag.sha);
-    }
-    catch (error) {
-        if (statusOf(error) === 422)
-            await state.setTagOwnership(tag.name, "not-owned");
-        throw new ReleaseError("git_sync_failed", `Unable to atomically create tag ${tag.name}: ${apiFailureDetail(error)}.`, { cause: error });
-    }
-    await state.setTagOwnership(tag.name, "created");
 }
 
 /** Detect free variable `global` from Node.js. */
@@ -142529,9 +142500,50 @@ function filterReleaseCommits(commits, warn = () => undefined) {
     });
 }
 
+function statusOf(error) {
+    return typeof error === "object" && error && "status" in error && typeof error.status === "number"
+        ? error.status
+        : undefined;
+}
+function apiFailureDetail(error) {
+    if (typeof error !== "object" || !error)
+        return String(error);
+    const status = statusOf(error);
+    const message = "message" in error && typeof error.message === "string" ? error.message : undefined;
+    const response = "response" in error && typeof error.response === "object" && error.response
+        ? error.response
+        : undefined;
+    const headers = response && "headers" in response && typeof response.headers === "object" && response.headers
+        ? response.headers
+        : undefined;
+    const requestId = headers && "x-github-request-id" in headers &&
+        typeof headers["x-github-request-id"] === "string"
+        ? headers["x-github-request-id"]
+        : undefined;
+    return [status === undefined ? undefined : `HTTP ${status}`, message, requestId ? `request ${requestId}` : undefined]
+        .filter(Boolean)
+        .join("; ") || "unknown GitHub API failure";
+}
+async function createOwnedTag(api, state, tag) {
+    await state.beginTag(tag);
+    try {
+        await api.createRef(`tags/${tag.name}`, tag.sha);
+    }
+    catch (error) {
+        if (statusOf(error) === 422)
+            await state.setTagOwnership(tag.name, "not-owned");
+        throw new ReleaseError("git_sync_failed", `Unable to atomically create tag ${tag.name}: ${apiFailureDetail(error)}.`, { cause: error });
+    }
+    await state.setTagOwnership(tag.name, "created");
+}
+
 function named(name, plugin) {
     Object.defineProperty(plugin, "pluginName", { value: name, enumerable: true });
     return plugin;
+}
+async function removeTransientBootstrapTag(root, tag) {
+    if (tag)
+        await deleteLocalTag(root, tag);
 }
 async function runSemanticRelease(options) {
     let semanticLog = "";
@@ -142555,6 +142567,7 @@ async function runSemanticRelease(options) {
             context.nextRelease.gitTag = `v${context.nextRelease.version}`;
             context.nextRelease.name = context.nextRelease.gitTag;
         }
+        await removeTransientBootstrapTag(options.root, options.transientBootstrapTag);
     });
     const generateNotes$1 = named("release-notes", async (pluginOptions, context) => {
         const commits = filterReleaseCommits(context.commits);
@@ -142796,13 +142809,13 @@ function branchName(env) {
         return undefined;
     return env.GITHUB_REF_NAME ?? env.GITHUB_REF?.replace(/^refs\/heads\//, "");
 }
-async function ensureBootstrapTag(root, api, store) {
+async function ensureBootstrapTag(root) {
     const bootstrap = await bootstrapTagTarget(root);
     if (!bootstrap)
-        return;
-    await createOwnedTag(api, store, bootstrap);
+        return undefined;
     await createLocalTag(root, bootstrap.name, bootstrap.sha);
-    info(`Created bootstrap tag ${bootstrap.name} on the first-parent initial commit.`);
+    info(`Created transient local bootstrap tag ${bootstrap.name} on the first-parent initial commit.`);
+    return bootstrap.name;
 }
 async function failureSummary(error, rollbackError) {
     summary.addHeading("Release failed", 2)
@@ -142861,9 +142874,10 @@ async function main() {
         store = new StateStore(join(runnerTemp, `release-cleanup-${process.env.GITHUB_RUN_ID ?? "local"}-${process.env.GITHUB_RUN_ATTEMPT ?? "1"}.json`));
         await store.initialize();
         const releaseEnv = { ...process.env, GITHUB_TOKEN: token, GH_TOKEN: token };
+        let transientBootstrapTag;
         await group("Synchronize release history", async () => {
             await syncHistory(root, defaultBranch, token, process.env.GITHUB_SERVER_URL ?? "https://github.com");
-            await ensureBootstrapTag(root, api, store);
+            transientBootstrapTag = await ensureBootstrapTag(root);
         });
         const tags = await reachableVersionTags(root);
         assertVersionMode(versioning, await api.releaseVersionModes());
@@ -142884,6 +142898,7 @@ async function main() {
             env: releaseEnv,
             api,
             state: store,
+            transientBootstrapTag,
         });
         try {
             await successSummary(result);
