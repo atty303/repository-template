@@ -87,3 +87,8 @@ export async function deleteLocalTag(root: string, name: string): Promise<void> 
     throw new ReleaseError("git_sync_failed", `Unable to delete transient local tag ${name}.`, { cause: error });
   }
 }
+
+export async function deleteLocalTagIfPresent(root: string, name: string): Promise<void> {
+  if ((await git(root, ["tag", "--list", name])) !== name) return;
+  await deleteLocalTag(root, name);
+}

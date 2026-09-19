@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { runCommand } from "../src/command.ts";
-import { bootstrapTagTarget, createLocalTag, deleteLocalTag, git } from "../src/git.ts";
+import { bootstrapTagTarget, createLocalTag, deleteLocalTagIfPresent, git } from "../src/git.ts";
 
 test("bootstrap tag targets the first-parent initial commit and is created once", async (context) => {
   const root = await mkdtemp(join(tmpdir(), "release-bootstrap-"));
@@ -23,6 +23,7 @@ test("bootstrap tag targets the first-parent initial commit and is created once"
   await createLocalTag(root, created!.name, created!.sha);
   assert.equal(await git(root, ["rev-list", "-n", "1", "v0.0.0"]), initial);
   assert.equal(await bootstrapTagTarget(root), undefined);
-  await deleteLocalTag(root, created!.name);
+  await deleteLocalTagIfPresent(root, created!.name);
+  await deleteLocalTagIfPresent(root, created!.name);
   assert.deepEqual(await bootstrapTagTarget(root), created);
 });

@@ -12,7 +12,7 @@ import {
 import { GitHubApi } from "./github.ts";
 import { findReleaseTasks } from "./mise.ts";
 import { ReleaseError, releaseError } from "./errors.ts";
-import { runSemanticRelease } from "./semantic.ts";
+import { removeTransientBootstrapTag, runSemanticRelease } from "./semantic.ts";
 import { rollback, StateStore } from "./state.ts";
 import { assertVersionMode, type Versioning } from "./versioning.ts";
 import { isSupportedRunner } from "./runner.ts";
@@ -62,6 +62,8 @@ async function post(): Promise<void> {
 async function main(): Promise<void> {
   let store: StateStore | undefined;
   let api: GitHubApi | undefined;
+  let cleanupRoot: string | undefined;
+  let transientBootstrapTag: string | undefined;
   try {
     if (!isSupportedRunner(process.env)) {
       throw new ReleaseError(
@@ -83,6 +85,7 @@ async function main(): Promise<void> {
     }
 
     const root = await repositoryRoot(process.env.GITHUB_WORKSPACE ?? process.cwd());
+    cleanupRoot = root;
     const runnerTemp = process.env.RUNNER_TEMP;
     if (!runnerTemp) throw new ReleaseError("unsupported_runner", "RUNNER_TEMP is not set.");
     store = new StateStore(
@@ -93,8 +96,6 @@ async function main(): Promise<void> {
     );
     await store.initialize();
     const releaseEnv = { ...process.env, GITHUB_TOKEN: token, GH_TOKEN: token };
-    let transientBootstrapTag: string | undefined;
-
     await core.group("Synchronize release history", async () => {
       await syncHistory(root, defaultBranch, token, process.env.GITHUB_SERVER_URL ?? "https://github.com");
       transientBootstrapTag = await ensureBootstrapTag(root);
@@ -143,6 +144,15 @@ async function main(): Promise<void> {
     }
     await failureSummary(failure, rollbackFailure);
     core.setFailed(`[${failure.code}] ${failure.message}${rollbackFailure ? `; ${rollbackFailure.message}` : ""}`);
+  } finally {
+    if (cleanupRoot && transientBootstrapTag) {
+      try {
+        await removeTransientBootstrapTag(cleanupRoot, transientBootstrapTag);
+      } catch (error) {
+        const cleanupFailure = releaseError(error, "git_sync_failed");
+        core.setFailed(`[${cleanupFailure.code}] ${cleanupFailure.message}`);
+      }
+    }
   }
 }
 

@@ -148,6 +148,13 @@ After the first real release, the selected mode is immutable:
   counter `0`; later releases increment it. A clock earlier than the latest
   release month fails closed.
 
+CalVer remains inside semantic-release's normal version and tag lifecycle.
+Within a month the action maps a relevant change to a patch increment; across a
+month boundary it maps one to a minor increment. On the first release or after
+skipped months, it creates a lightweight predecessor tag on the previous release
+commit in the runner only, so semantic-release computes the exact current month.
+That bridge tag is removed before tags are pushed, just like the bootstrap tag.
+
 Each successful GitHub Release contains a hidden mode marker. The action scans
 those durable markers before analysis and rejects a switch between SemVer and
 CalVer. Existing numeric tags are not guessed to belong to either mode.

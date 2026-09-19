@@ -8,13 +8,13 @@ import * as releaseNotesGenerator from "@semantic-release/release-notes-generato
 import * as githubPlugin from "@semantic-release/github";
 import { resetArtifactDirectory, validateArtifacts } from "./artifacts.ts";
 import { filterReleaseCommits, RELEASE_RULES } from "./commits.ts";
-import { currentHead, deleteLocalTag } from "./git.ts";
+import { createLocalTag, currentHead, deleteLocalTagIfPresent, git } from "./git.ts";
 import type { GitHubApi } from "./github.ts";
 import { runReleaseTask } from "./mise.ts";
 import { createOwnedTag } from "./ownership.ts";
 import { ReleaseError, releaseError } from "./errors.ts";
 import type { StateStore } from "./state.ts";
-import { nextCalver, type Versioning } from "./versioning.ts";
+import { type CalverPlan, latestVersionTag, planCalver, type Versioning } from "./versioning.ts";
 
 interface Tasks {
   build: string;
@@ -29,6 +29,7 @@ interface NextRelease {
 }
 interface PluginContext {
   commits: Array<{ hash?: string; message: string }>;
+  lastRelease: { gitHead?: string; gitTag?: string };
   nextRelease: NextRelease;
 }
 
@@ -47,7 +48,47 @@ function named<T extends (...args: any[]) => any>(name: string, plugin: T): T {
 }
 
 export async function removeTransientBootstrapTag(root: string, tag: string | undefined): Promise<void> {
-  if (tag) await deleteLocalTag(root, tag);
+  if (tag) await deleteLocalTagIfPresent(root, tag);
+}
+
+async function cleanupTransientTags(root: string, tags: Set<string>): Promise<void> {
+  for (const tag of [...tags]) {
+    await removeTransientBootstrapTag(root, tag);
+    tags.delete(tag);
+  }
+}
+
+export async function withTransientLocalTags<T>(
+  root: string,
+  tags: Set<string>,
+  operation: () => Promise<T>,
+): Promise<T> {
+  let operationError: unknown;
+  try {
+    return await operation();
+  } catch (error) {
+    operationError = error;
+    throw error;
+  } finally {
+    try {
+      await cleanupTransientTags(root, tags);
+    } catch (cleanupError) {
+      if (operationError) {
+        throw new ReleaseError("git_sync_failed", "Release failed and transient local tags could not be removed.", {
+          cause: new AggregateError([operationError, cleanupError]),
+        });
+      }
+      throw cleanupError;
+    }
+  }
+}
+
+export function releaseNotesLastRelease(
+  lastRelease: PluginContext["lastRelease"],
+  calver: CalverPlan | undefined,
+): PluginContext["lastRelease"] {
+  if (!calver?.syntheticBaseTag) return lastRelease;
+  return calver.releaseNotesBaseTag ? { ...lastRelease, gitTag: calver.releaseNotesBaseTag } : {};
 }
 
 export async function runSemanticRelease(options: {
@@ -63,6 +104,20 @@ export async function runSemanticRelease(options: {
   state: StateStore;
   transientBootstrapTag?: string | undefined;
 }): Promise<ReleaseResult> {
+  const calver = options.versioning === "calver" ? planCalver(options.reachableTags) : undefined;
+  const transientTags = new Set(
+    [options.transientBootstrapTag].filter((tag): tag is string => Boolean(tag)),
+  );
+  if (calver?.syntheticBaseTag) {
+    const anchorTag = latestVersionTag(options.reachableTags);
+    if (!anchorTag) {
+      throw new ReleaseError("git_sync_failed", "CalVer requires a reachable version tag as its release anchor.");
+    }
+    const anchorSha = await git(options.root, ["rev-list", "-n", "1", anchorTag]);
+    await createLocalTag(options.root, calver.syntheticBaseTag, anchorSha);
+    transientTags.add(calver.syntheticBaseTag);
+    core.info(`Created transient local CalVer base ${calver.syntheticBaseTag} at ${anchorTag}.`);
+  }
   let semanticLog = "";
   const sink = new Writable({
     write(chunk, _encoding, callback) {
@@ -77,21 +132,24 @@ export async function runSemanticRelease(options: {
 
   const analyze = named("conventional-commits", async (pluginOptions: unknown, context: PluginContext) => {
     const commits = filterReleaseCommits(context.commits, (message) => core.warning(message));
-    return commitAnalyzer.analyzeCommits(pluginOptions, { ...context, commits });
+    const releaseType = await commitAnalyzer.analyzeCommits(pluginOptions, { ...context, commits });
+    return releaseType && calver ? calver.releaseType : releaseType;
   });
 
   const verifyRelease = named("release-version", async (_pluginOptions: unknown, context: PluginContext) => {
-    if (options.versioning === "calver") {
-      context.nextRelease.version = nextCalver(options.reachableTags);
-      context.nextRelease.gitTag = `v${context.nextRelease.version}`;
-      context.nextRelease.name = context.nextRelease.gitTag;
+    if (calver && context.nextRelease.version !== calver.version) {
+      throw new ReleaseError(
+        "version_calculation_failed",
+        `semantic-release calculated ${context.nextRelease.version}; expected CalVer ${calver.version}.`,
+      );
     }
-    await removeTransientBootstrapTag(options.root, options.transientBootstrapTag);
+    await cleanupTransientTags(options.root, transientTags);
   });
 
   const generateNotes = named("release-notes", async (pluginOptions: unknown, context: PluginContext) => {
     const commits = filterReleaseCommits(context.commits);
-    return releaseNotesGenerator.generateNotes(pluginOptions, { ...context, commits });
+    const lastRelease = releaseNotesLastRelease(context.lastRelease, calver);
+    return releaseNotesGenerator.generateNotes(pluginOptions, { ...context, commits, lastRelease });
   });
 
   const prepare = named("mise-release-build", async (_pluginOptions: unknown, context: PluginContext) => {
@@ -189,28 +247,29 @@ export async function runSemanticRelease(options: {
   };
   let result: Awaited<ReturnType<typeof semanticRelease>>;
   try {
-    result = await semanticRelease({
-      extends: [],
-      branches: [options.defaultBranch],
-      repositoryUrl: options.repositoryUrl,
-      tagFormat: "v${version}",
-      plugins: [],
-      analyzeCommits: [[analyze, { releaseRules: RELEASE_RULES }]],
-      verifyConditions: [[githubPlugin.verifyConditions, githubOptions]],
-      verifyRelease: [verifyRelease],
-      generateNotes: [[generateNotes, {}]],
-      prepare: [prepare],
-      publish,
-      addChannel: false,
-      success: false,
-      fail: false,
-      ci: true,
-    } as any, {
-      cwd: options.root,
-      env: options.env as Record<string, string>,
-      stdout: sink as any,
-      stderr: sink as any,
-    });
+    result = await withTransientLocalTags(options.root, transientTags, () =>
+      semanticRelease({
+        extends: [],
+        branches: [options.defaultBranch],
+        repositoryUrl: options.repositoryUrl,
+        tagFormat: "v${version}",
+        plugins: [],
+        analyzeCommits: [[analyze, { releaseRules: RELEASE_RULES }]],
+        verifyConditions: [[githubPlugin.verifyConditions, githubOptions]],
+        verifyRelease: [verifyRelease],
+        generateNotes: [[generateNotes, {}]],
+        prepare: [prepare],
+        publish,
+        addChannel: false,
+        success: false,
+        fail: false,
+        ci: true,
+      } as any, {
+        cwd: options.root,
+        env: options.env as Record<string, string>,
+        stdout: sink as any,
+        stderr: sink as any,
+      }));
   } catch (error) {
     await flushSemanticLog();
     throw error;

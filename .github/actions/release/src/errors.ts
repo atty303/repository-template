@@ -3,6 +3,7 @@ export type ErrorCode =
   | "git_sync_failed"
   | "version_mode_mismatch"
   | "calver_clock_regression"
+  | "version_calculation_failed"
   | "build_task_missing"
   | "build_failed"
   | "artifact_invalid"

@@ -28988,6 +28988,28 @@ function nextCalver(tags, now = new Date()) {
     }
     return `${year}.${month}.${latest?.major === year && latest.minor === month ? latest.patch + 1 : 0}`;
 }
+function latestVersionTag(tags) {
+    return tags.map(parseVersionTag).filter((tag) => Boolean(tag))
+        .sort((a, b) => b.major - a.major || b.minor - a.minor || b.patch - a.patch)[0]?.tag;
+}
+function planCalver(tags, now = new Date()) {
+    const version = nextCalver(tags, now);
+    const desired = parseVersionTag(`v${version}`);
+    const latest = tags.map(parseVersionTag).filter((tag) => Boolean(tag))
+        .filter((tag) => tag.tag !== "v0.0.0" && isCalverTag(tag))
+        .sort((a, b) => b.major - a.major || b.minor - a.minor || b.patch - a.patch)[0];
+    if (desired.patch > 0)
+        return { version, releaseType: "patch" };
+    if (latest?.major === desired.major && latest.minor + 1 === desired.minor) {
+        return { version, releaseType: "minor" };
+    }
+    return {
+        version,
+        releaseType: "minor",
+        syntheticBaseTag: `v${desired.major}.${desired.minor - 1}.0`,
+        ...(latest ? { releaseNotesBaseTag: latest.tag } : {}),
+    };
+}
 
 function gitAuthEnvironment(token, serverUrl) {
     const key = `http.${serverUrl.replace(/\/$/, "")}/.extraheader`;
@@ -29063,6 +29085,11 @@ async function deleteLocalTag(root, name) {
     catch (error) {
         throw new ReleaseError("git_sync_failed", `Unable to delete transient local tag ${name}.`, { cause: error });
     }
+}
+async function deleteLocalTagIfPresent(root, name) {
+    if ((await git$1(root, ["tag", "--list", name])) !== name)
+        return;
+    await deleteLocalTag(root, name);
 }
 
 class Context {
@@ -49293,7 +49320,7 @@ function cleanStack(stack, {pretty = false, basePath, pathFilter} = {}) {
 
 const cleanInternalStack = stack => stack.replaceAll(/\s+at .*aggregate-error\/index.js:\d+:\d+\)?/g, '');
 
-class AggregateError extends Error {
+let AggregateError$1 = class AggregateError extends Error {
 	#errors;
 
 	name = 'AggregateError';
@@ -49331,7 +49358,7 @@ class AggregateError extends Error {
 	get errors() {
 		return [...this.#errors];
 	}
-}
+};
 
 const RELEASE_TYPE = ["patch", "minor", "major"];
 
@@ -69494,7 +69521,7 @@ var pipeline = (steps, { settleAll = false, getNextInput = identity$3, transform
       input
     );
     if (errors.length > 0) {
-      throw new AggregateError(errors);
+      throw new AggregateError$1(errors);
     }
 
     return results;
@@ -69597,7 +69624,7 @@ var plugins = async (context, pluginsPath) => {
     : [];
 
   if (errors.length > 0) {
-    throw new AggregateError(errors);
+    throw new AggregateError$1(errors);
   }
 
   options = { ...plugins, ...options };
@@ -69653,7 +69680,7 @@ var plugins = async (context, pluginsPath) => {
     plugins
   );
   if (errors.length > 0) {
-    throw new AggregateError(errors);
+    throw new AggregateError$1(errors);
   }
 
   return pluginsConfig;
@@ -69782,7 +69809,7 @@ var verify$1 = async (context) => {
   });
 
   if (errors.length > 0) {
-    throw new AggregateError(errors);
+    throw new AggregateError$1(errors);
   }
 };
 
@@ -74754,7 +74781,7 @@ var getBranches = async (repositoryUrl, ciBranch, context) => {
   });
 
   if (errors.length > 0) {
-    throw new AggregateError(errors);
+    throw new AggregateError$1(errors);
   }
 
   return [...result.maintenance, ...result.release, ...result.prerelease];
@@ -79244,7 +79271,7 @@ async function run(context, plugins) {
   }
 
   if (errors.length > 0) {
-    throw new AggregateError(errors);
+    throw new AggregateError$1(errors);
   }
 
   context.lastRelease = getLastRelease(context);
@@ -133926,7 +133953,7 @@ async function verify(pluginConfig, context, { Octokit }) {
   }
 
   if (errors.length > 0) {
-    throw new AggregateError(errors);
+    throw new AggregateError$1(errors);
   }
 }
 
@@ -142543,9 +142570,55 @@ function named(name, plugin) {
 }
 async function removeTransientBootstrapTag(root, tag) {
     if (tag)
-        await deleteLocalTag(root, tag);
+        await deleteLocalTagIfPresent(root, tag);
+}
+async function cleanupTransientTags(root, tags) {
+    for (const tag of [...tags]) {
+        await removeTransientBootstrapTag(root, tag);
+        tags.delete(tag);
+    }
+}
+async function withTransientLocalTags(root, tags, operation) {
+    let operationError;
+    try {
+        return await operation();
+    }
+    catch (error) {
+        operationError = error;
+        throw error;
+    }
+    finally {
+        try {
+            await cleanupTransientTags(root, tags);
+        }
+        catch (cleanupError) {
+            if (operationError) {
+                throw new ReleaseError("git_sync_failed", "Release failed and transient local tags could not be removed.", {
+                    cause: new AggregateError([operationError, cleanupError]),
+                });
+            }
+            throw cleanupError;
+        }
+    }
+}
+function releaseNotesLastRelease(lastRelease, calver) {
+    if (!calver?.syntheticBaseTag)
+        return lastRelease;
+    return calver.releaseNotesBaseTag ? { ...lastRelease, gitTag: calver.releaseNotesBaseTag } : {};
 }
 async function runSemanticRelease(options) {
+    const calver = options.versioning === "calver" ? planCalver(options.reachableTags) : undefined;
+    const transientTags = new Set([options.transientBootstrapTag].filter((tag) => Boolean(tag)));
+    if (calver?.syntheticBaseTag) {
+        const anchorTag = latestVersionTag(options.reachableTags);
+        if (!anchorTag) {
+            throw new ReleaseError("git_sync_failed", "CalVer requires a reachable version tag as its release anchor.");
+        }
+        const anchorSha = await git$1(options.root, ["rev-list", "-n", "1", anchorTag]);
+        await createLocalTag(options.root, calver.syntheticBaseTag, anchorSha);
+        transientTags.add(calver.syntheticBaseTag);
+        info(`Created transient local CalVer base ${calver.syntheticBaseTag} at ${anchorTag}.`);
+    }
     let semanticLog = "";
     const sink = new Writable({
         write(chunk, _encoding, callback) {
@@ -142559,19 +142632,19 @@ async function runSemanticRelease(options) {
     const releaseMarker = `repository-template-release-owner:${releaseOwner}`;
     const analyze = named("conventional-commits", async (pluginOptions, context) => {
         const commits = filterReleaseCommits(context.commits, (message) => warning$1(message));
-        return analyzeCommits(pluginOptions, { ...context, commits });
+        const releaseType = await analyzeCommits(pluginOptions, { ...context, commits });
+        return releaseType && calver ? calver.releaseType : releaseType;
     });
     const verifyRelease = named("release-version", async (_pluginOptions, context) => {
-        if (options.versioning === "calver") {
-            context.nextRelease.version = nextCalver(options.reachableTags);
-            context.nextRelease.gitTag = `v${context.nextRelease.version}`;
-            context.nextRelease.name = context.nextRelease.gitTag;
+        if (calver && context.nextRelease.version !== calver.version) {
+            throw new ReleaseError("version_calculation_failed", `semantic-release calculated ${context.nextRelease.version}; expected CalVer ${calver.version}.`);
         }
-        await removeTransientBootstrapTag(options.root, options.transientBootstrapTag);
+        await cleanupTransientTags(options.root, transientTags);
     });
     const generateNotes$1 = named("release-notes", async (pluginOptions, context) => {
         const commits = filterReleaseCommits(context.commits);
-        return generateNotes(pluginOptions, { ...context, commits });
+        const lastRelease = releaseNotesLastRelease(context.lastRelease, calver);
+        return generateNotes(pluginOptions, { ...context, commits, lastRelease });
     });
     const prepare = named("mise-release-build", async (_pluginOptions, context) => {
         await group("Build release artifacts", async () => {
@@ -142654,7 +142727,7 @@ async function runSemanticRelease(options) {
     };
     let result;
     try {
-        result = await semanticRelease({
+        result = await withTransientLocalTags(options.root, transientTags, () => semanticRelease({
             extends: [],
             branches: [options.defaultBranch],
             repositoryUrl: options.repositoryUrl,
@@ -142675,7 +142748,7 @@ async function runSemanticRelease(options) {
             env: options.env,
             stdout: sink,
             stderr: sink,
-        });
+        }));
     }
     catch (error) {
         await flushSemanticLog();
@@ -142851,6 +142924,8 @@ async function post() {
 async function main() {
     let store;
     let api;
+    let cleanupRoot;
+    let transientBootstrapTag;
     try {
         if (!isSupportedRunner(process.env)) {
             throw new ReleaseError("unsupported_runner", "This release action currently supports GitHub-hosted Ubuntu runners only.");
@@ -142868,13 +142943,13 @@ async function main() {
             return;
         }
         const root = await repositoryRoot(process.env.GITHUB_WORKSPACE ?? process.cwd());
+        cleanupRoot = root;
         const runnerTemp = process.env.RUNNER_TEMP;
         if (!runnerTemp)
             throw new ReleaseError("unsupported_runner", "RUNNER_TEMP is not set.");
         store = new StateStore(join(runnerTemp, `release-cleanup-${process.env.GITHUB_RUN_ID ?? "local"}-${process.env.GITHUB_RUN_ATTEMPT ?? "1"}.json`));
         await store.initialize();
         const releaseEnv = { ...process.env, GITHUB_TOKEN: token, GH_TOKEN: token };
-        let transientBootstrapTag;
         await group("Synchronize release history", async () => {
             await syncHistory(root, defaultBranch, token, process.env.GITHUB_SERVER_URL ?? "https://github.com");
             transientBootstrapTag = await ensureBootstrapTag(root);
@@ -142921,6 +142996,17 @@ async function main() {
         }
         await failureSummary(failure, rollbackFailure);
         setFailed(`[${failure.code}] ${failure.message}${rollbackFailure ? `; ${rollbackFailure.message}` : ""}`);
+    }
+    finally {
+        if (cleanupRoot && transientBootstrapTag) {
+            try {
+                await removeTransientBootstrapTag(cleanupRoot, transientBootstrapTag);
+            }
+            catch (error) {
+                const cleanupFailure = releaseError(error, "git_sync_failed");
+                setFailed(`[${cleanupFailure.code}] ${cleanupFailure.message}`);
+            }
+        }
     }
 }
 if (getState("post_sentinel"))
