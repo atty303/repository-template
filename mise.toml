@@ -4,6 +4,7 @@ min_version = "2026.8.6"
 actionlint = "1.7.12"
 deno = "2.9.5"
 hk = "1.55.0"
+node = "24.12.0"
 taplo = "0.10.0"
 "github:archetect/archetect" = "3.4.3"
 
@@ -24,7 +25,8 @@ set -euo pipefail
 if (( $# > 0 )); then
   exec hk check "$@"
 fi
-exec hk check --all
+hk check --all
+exec mise run release-action:check
 '''
 
 [tasks.fix]
@@ -35,8 +37,34 @@ set -euo pipefail
 if (( $# > 0 )); then
   exec hk fix "$@"
 fi
-exec hk fix --all
+hk fix --all
+exec mise run release-action:fix
 '''
+
+[tasks."release-action:install"]
+hide = true
+dir = ".github/actions/release"
+sources = ["package-lock.json", "package.json"]
+outputs = ["node_modules/.package-lock.json"]
+run = "npm ci --ignore-scripts"
+
+[tasks."release-action:check"]
+description = "Check the bundled release action"
+depends = ["release-action:install"]
+dir = ".github/actions/release"
+run = "npm run check"
+
+[tasks."release-action:fix"]
+description = "Rebuild the bundled release action"
+depends = ["release-action:install"]
+dir = ".github/actions/release"
+run = "npm run fix"
+
+[tasks."release-action:test"]
+description = "Test the bundled release action"
+depends = ["release-action:install"]
+dir = ".github/actions/release"
+run = "npm test"
 
 [tasks.generate]
 description = "Render a repository with Archetect"
@@ -49,4 +77,5 @@ run = '''
 #!/usr/bin/env bash
 set -euo pipefail
 deno run --allow-env=REPOSITORY_TEMPLATE_ARCHETECT,REPOSITORY_TEMPLATE_MISE --allow-read --allow-run=archetect,git,mise --allow-write scripts/test_generate.ts
+mise run release-action:test
 '''

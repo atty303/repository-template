@@ -18,7 +18,18 @@ local linters = new Mapping<String, Step> {
     check = new Command { argv = List("deno", "check", "{{files}}") }
   }
   ["deno:fmt"] {
-    glob = List("scripts/*.ts", "README.md")
+    glob = List(
+      "scripts/*.ts",
+      ".github/actions/release/action.yml",
+      ".github/actions/release/package.json",
+      ".github/actions/release/rollup.config.mjs",
+      ".github/actions/release/scripts/*.mjs",
+      ".github/actions/release/src/*.ts",
+      ".github/actions/release/tests/*.ts",
+      ".github/actions/release/tsconfig*.json",
+      "docs/*.md",
+      "README.md"
+    )
     stage = glob
     check = new Command { argv = List("deno", "fmt", "--check", "{{files}}") }
     fix = new Command { argv = List("deno", "fmt", "{{files}}") }

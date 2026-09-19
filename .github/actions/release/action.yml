@@ -1,0 +1,17 @@
+name: Generic release
+description: Create a SemVer or CalVer release from Conventional Commits and mise tasks
+
+inputs:
+  versioning:
+    description: Version scheme (semver or calver)
+    required: true
+  github-token:
+    description: Token used for Git tags and GitHub Releases
+    required: false
+    default: ${{ github.token }}
+
+runs:
+  using: node24
+  main: dist/index.js
+  post: dist/index.js
+  post-if: always()

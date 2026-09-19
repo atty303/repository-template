@@ -1,2 +1,5 @@
 .idea/
 .DS_Store
+.release/
+.github/actions/release/node_modules/
+.github/actions/release/.build/

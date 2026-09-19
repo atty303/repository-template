@@ -3,6 +3,10 @@
 An [Archetect](https://archetect.github.io/) archetype for reproducible,
 agent-friendly repositories.
 
+This repository also publishes a commit-pinned, generic GitHub release action.
+It is maintained independently from the Archetect render tree; see
+[`docs/release-action.md`](docs/release-action.md).
+
 ## Templates
 
 - `base` provides mise, hk, CI, a dev container, and repository guidance without
