@@ -1,0 +1,27 @@
+Task: Publish and live-verify the generic release action with Scorepeek CalVer
+Anchor: 16aaaafee2e5921602a9a3690717881a2bf5d272
+Base: bc38d10a96dc4fe4af772b689f309ff5b1a9da43
+Line: main
+Commits: 0fc45f5 preserves GitHub tag API diagnostics; 9a855fd keeps bootstrap tags local; 97f1e80 uses the bundled conventional preset; 16aaaaf makes semantic-release calculate the final CalVer and guarantees transient-tag cleanup
+Guidance: repository AGENTS.md; investigate-problem; develop-repository; design-program-observability; review; maintain-agent-guidance; atty303 engineering policy
+Environment: durable GitHub JavaScript action in atty303/repository-template; live consumer at atty303/scorepeek; GitHub-hosted Ubuntu release runner; semantic-release with caller-owned mise setup and tasks
+
+Evidence:
+- The first Scorepeek live release attempt exposed missing bundled preset resolution, and a later attempt exposed a clean-runner skin artifact dependency; both were repaired at their owning source.
+- A subsequent live attempt created v0.1.0 because semantic-release deep-clones plugin context and ignored verifyRelease mutations of nextRelease. The action-owned release marker was confirmed before deleting that erroneous release and tag; the public release URL then returned 404 and the remote tag was absent.
+- The final action maps CalVer month transitions to semantic-release release types, uses local-only predecessor tags so semantic-release owns the final version/tag, keeps release-note comparison links on durable tags, and removes bootstrap/bridge tags on success, no-release, early failure, and caller-side failure.
+- mise run release-action:test passed 25 of 25 tests, including a bare-remote v2026.9.0 release, GitHub-style release-note links, monorepo root task syntax, and transient-tag cleanup. mise run check and bundle reproducibility passed.
+- Three fresh full reviews covered successive release-path snapshots. Two actionable lifecycle findings were fixed; the final review reported no actionable findings and independently passed all 25 tests.
+- origin/main readback after push was 16aaaafee2e5921602a9a3690717881a2bf5d272.
+
+Authority: The action source, generated dist bundle, tests, and docs at the anchor define the current generic SemVer/CalVer release contract. Bootstrap and synthetic predecessor tags are runner-local implementation resources and are never release artifacts.
+
+Transcript:
+- U1: pushしてrelease確認
+  - A: Pushed the prepared central action and Scorepeek release workflow, monitored every triggered GitHub Actions job, and used the live release run as the failure oracle. Repaired the bundled preset path, clean-runner skin dependency, and semantic-release CalVer calculation in their owning repositories. Confirmed and removed the action-owned erroneous v0.1.0 release/tag before preparing the corrected live rerun.
+- U2: ci setup高速化だから含めてpushしていい
+  - A: Included the already reviewed mise native-binstall setup optimization in the authorized Scorepeek push and continued verifying release, CI, and Pages independently.
+- U3: annotaed tagじゃないとダメなの？
+  - A: Determined that annotated remote bootstrap tags were unnecessary; a local lightweight bootstrap tag is sufficient for semantic-release history calculation and avoids publishing implementation-only refs.
+- U4: それでいいよ
+  - A: Finalized the local-only bootstrap and bridge design, fixed release-note and cleanup edge cases found by fresh reviews, passed 25 action tests and the full check, committed 16aaaaf, pushed it, and read back the exact remote SHA for the Scorepeek pin.
