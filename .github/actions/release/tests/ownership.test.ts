@@ -42,3 +42,25 @@ test("atomic ref conflict is recorded as non-owned", async (context) => {
   );
   assert.equal(store.snapshot().tags[0]?.ownership, "not-owned");
 });
+
+test("atomic ref failure reports safe GitHub API diagnostics", async (context) => {
+  const root = await mkdtemp(join(tmpdir(), "release-owned-ref-diagnostics-"));
+  context.after(() => rm(root, { recursive: true, force: true }));
+  const store = new StateStore(join(root, "state.json"));
+  await assert.rejects(
+    createOwnedTag(
+      {
+        async createRef() {
+          throw Object.assign(new Error("Resource not accessible by integration"), {
+            status: 403,
+            response: { headers: { "x-github-request-id": "SAFE_REQUEST_ID" } },
+          });
+        },
+      },
+      store,
+      { name: "v0.0.0", sha: "initial" },
+    ),
+    /HTTP 403; Resource not accessible by integration; request SAFE_REQUEST_ID/u,
+  );
+  assert.equal(store.snapshot().tags[0]?.ownership, "creating");
+});

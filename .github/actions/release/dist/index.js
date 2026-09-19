@@ -34517,6 +34517,25 @@ function statusOf(error) {
         ? error.status
         : undefined;
 }
+function apiFailureDetail(error) {
+    if (typeof error !== "object" || !error)
+        return String(error);
+    const status = statusOf(error);
+    const message = "message" in error && typeof error.message === "string" ? error.message : undefined;
+    const response = "response" in error && typeof error.response === "object" && error.response
+        ? error.response
+        : undefined;
+    const headers = response && "headers" in response && typeof response.headers === "object" && response.headers
+        ? response.headers
+        : undefined;
+    const requestId = headers && "x-github-request-id" in headers &&
+        typeof headers["x-github-request-id"] === "string"
+        ? headers["x-github-request-id"]
+        : undefined;
+    return [status === undefined ? undefined : `HTTP ${status}`, message, requestId ? `request ${requestId}` : undefined]
+        .filter(Boolean)
+        .join("; ") || "unknown GitHub API failure";
+}
 async function createOwnedTag(api, state, tag) {
     await state.beginTag(tag);
     try {
@@ -34525,7 +34544,7 @@ async function createOwnedTag(api, state, tag) {
     catch (error) {
         if (statusOf(error) === 422)
             await state.setTagOwnership(tag.name, "not-owned");
-        throw new ReleaseError("git_sync_failed", `Unable to atomically create tag ${tag.name}.`, { cause: error });
+        throw new ReleaseError("git_sync_failed", `Unable to atomically create tag ${tag.name}: ${apiFailureDetail(error)}.`, { cause: error });
     }
     await state.setTagOwnership(tag.name, "created");
 }
