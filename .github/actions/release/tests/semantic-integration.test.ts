@@ -41,9 +41,9 @@ test("semantic-release accepts bundled direct lifecycle functions", async (conte
     dryRun: false,
     noCi: true,
     plugins: [],
-    analyzeCommits: [[commitAnalyzer.analyzeCommits, { preset: "angular" }]],
+    analyzeCommits: [[commitAnalyzer.analyzeCommits, {}]],
     verifyRelease: [async () => removeTransientBootstrapTag(root, "v0.0.0")],
-    generateNotes: [[releaseNotesGenerator.generateNotes, { preset: "angular" }]],
+    generateNotes: [[releaseNotesGenerator.generateNotes, {}]],
   } as any, { cwd: root, env: process.env as Record<string, string>, stdout: sink as any, stderr: sink as any });
   assert.ok(result && "nextRelease" in result);
   assert.equal(result.nextRelease.version, "0.0.1");
