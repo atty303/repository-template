@@ -1,0 +1,140 @@
+Task: Add portable opt-in Playwright CLI and browser scenario guidance to repository-template
+Anchor: 124ee84f8b01ac242d16b352f2d1e37627124724
+Base: 00351cee0fe0ce1f9a9facd30a39830905db5ca5
+Branch: main
+Commits: 124ee84f8b01ac242d16b352f2d1e37627124724 feat: add opt-in Playwright browser automation
+Guidance: repository AGENTS.md; develop-repository; design-program-observability; review; git-task-evidence
+Conditions: No push, release, or deploy; generation requires Archetect and Git only; Node.js and Playwright MCP excluded.
+## Evidence
+mise 2026.8.6 and current mise generated all six project variants; mise run test passed, including 27 release action tests. Browser install was bounded: first open 5.35 seconds, repeat open 0.36 seconds, repeat install 0.15 seconds; no redownload. Deno scenario Playwright API smoke test passed. Current mise run test and check passed after final docs and guidance changes.
+Authority: Current source, committed tests, repository-template documentation, and the user decisions transcribed below.
+## Transcript
+- U1: # 実装依頼
+    
+    ## 依頼
+    
+    `/home/atty/src/atty303/repository-template` に、生成時に選択できる portable な Playwright ブラウザ操作環境を追加してください。
+    
+    ## 目的
+    
+    - TS 以外の repo でも、mise 管理の Deno から Playwright の coding agent 向け CLI を使えるようにする。
+    - 必要になった repo では、TypeScript の browser scenario test を通常のテスト契約に追加できるようにする。
+    - 同じ browser revision を使う repo 間で binary を共有し、不要な再ダウンロードを避ける。
+    
+    ## 成功条件
+    
+    - `base` と `deno` の両方でブラウザ機能を生成時に選択でき、既定は無効。無効な生成結果には Deno やブラウザ用ファイルが追加されない。
+    - 有効な生成結果では、Node.js をインストールせず、固定版 `playwright-cli` を Deno 経由で実行できる。CLI は repo の `deno.json` / `deno.lock` を参照・変更しない。
+    - agent は事前の install 操作なしで CLI を呼べる。Chromium headless shell が未導入の `open` に限り導入して再試行し、導入済みの通常操作では install コマンドを先行実行しない。明示的な browser install タスクも利用できる。
+    - Playwright の既定の OS 共通 browser cache を使う。同じ revision の再実行では binary を再ダウンロードせず、導入確認が短時間で終わる。
+    - 生成直後には scenario test と、そのためだけの `deno.json` 変更を置かない。後から `Deno.test` と Playwright API による TS scenario を追加し、repo の `mise run test` と CI に組み込む手順が `repository-template` の文書に揃っている。
+    - 生成先の `AGENTS.md` には、その `repository-template` 文書への短い参照だけを、ブラウザ機能を選んだ場合に含める。
+    - 生成結果と実際の CLI 起動を検証し、初回導入・再実行が無限待機しないことを時間上限付きで確認する。
+    
+    ## 決定事項
+    
+    - ブラウザ機能は `base` と `deno` に共通の opt-in とし、既定を無効にする。
+      - 理由: ブラウザを使わない repo に Deno とブラウザ用構成を増やさないため。
+      - 主な棄却案: 全生成 repo への標準導入。不要な repo にも依存が増える。
+    - mise は Deno の版を管理し、CLI は固定版 `npm:@playwright/cli` を `deno run --no-config` で直接実行する。
+      - 理由: Node.js 不要で、repo の Deno manifest と CLI を切り離せるため。
+      - 主な棄却案: mise の `npm:` tool として CLI を管理する方法。起動時に Deno 経由の処理がなお必要になる。
+    - agent 操作には Playwright CLI を使い、MCP と公式 CLI skill の同梱は行わない。
+      - 理由: CLI が指定された agent 用経路であり、生成先では短い guidance と CLI の help を使えるため。
+      - 主な棄却案: Playwright Test Agents と公式 skill の同梱。前者は内部で MCP を使い、後者は同期対象を増やす。
+    - CLI と後から追加する scenario test は Playwright の版と browser binary/cache を揃え、ブラウザの session・ログイン状態は共有しない。
+      - 理由: 同じ実行基盤を使いながら、テストを独立して実行するため。
+      - 主な棄却案: CLI session のテストへの引き継ぎ。テスト結果が操作履歴に依存する。
+    - scenario test は `Deno.test` から Playwright API を直接使う。テストを追加するときに repo の `deno.json` に依存を加え、通常の `mise run test` と CI に含める。
+      - 理由: TS で locator と assertion を書け、テストを repo の契約として管理できるため。
+      - 主な棄却案: CLI コマンドをテストから順に呼ぶ方法、および生成直後から smoke test を置く方法。
+    - CLI とテストの Playwright 版の一致は、文書に従って追加・更新した時点で成立する手順上の契約とする。更新後の版ずれを検出する自動チェックは設けない。
+      - 理由: 利用者が選んだ文書中心の構成を保つため。
+      - 主な棄却案: 実行時の自動版チェック。追加実装が必要になる。
+    - ブラウザは Chromium headless shell のみを標準対象とし、headed 用 binary、Firefox、WebKit は導入しない。
+      - 理由: 初回取得量と検証範囲を抑えるため。
+      - 主な棄却案: headed と複数ブラウザの標準導入。現時点の用途に対して導入量が増える。
+    - browser binary は Playwright が OS 共通 cache で管理する。通常の古い revision の自動削除を許し、CI 実行間の browser cache は追加しない。
+      - 理由: repo ごとの binary を作らず、cache の使用量と CI 設定を抑えるため。
+      - 主な棄却案: 自動削除の停止と CI cache。古い revision の再取得は許容する。
+    - 対象 OS は Linux と macOS とし、CI は既存の Linux runner で検証する。
+      - 理由: 現在のテンプレートの実行方式に沿うため。
+      - 主な棄却案: Windows 対応。今回の範囲を超える。
+    - scenario test の追加手順書は `repository-template` にだけ置き、生成先には複製しない。
+      - 理由: 手順の原典を一つにするため。
+      - 主な棄却案: 各生成先への手順書の複製。更新先が増える。
+    
+    ## 制約
+    
+    - Node.js をインストールしない。
+    - Playwright MCP を追加しない。
+    - 通常の Archetect 生成は Archetect と Git だけで成立させ、生成中に Deno・ブラウザ・外部コマンドを実行しない。
+    - ブラウザの初回導入は、agent に明示的な事前 install を要求しない。CLI の全操作に install コマンドを先行実行しない。
+    - push、release、deploy は行わない。
+    
+    ## 対象外
+    
+    - 生成先アプリ固有の scenario test とアプリ起動方法の実装。
+    - CLI と scenario test の browser session・認証状態の共有。
+    - 古い browser revision の永続保持、CI 実行間の browser cache、Windows 対応。
+    
+    ## 未検証の前提
+    
+    - 固定する CLI 版で、browser 未導入時の `open` 失敗を安全に識別し、導入後に一度だけ再試行できること。
+    - macOS でも、Deno 経由の CLI 起動と Chromium headless shell の導入が同じ構成で動くこと。
+    - 生成結果での opt-in と mise lockfile の扱いが、既存の Archetect 生成・検証契約と両立すること。
+    - CI の Linux runner に、導入した Chromium headless shell の起動に必要な OS 側の依存が揃っていること。
+    
+    ## 実装時の指示
+    
+    - `@playwright/cli@0.1.21` は、このホストで Node.js を `PATH` から外した Deno 2.9.5 から `install-browser chromium --only-shell` を実行し、約 5.8 秒で導入できた。同一コマンドの再実行は約 0.2 秒、導入後の `about:blank` 起動は約 0.3 秒だった。この版を実装時の検証済み候補とする。
+    - CLI が headless shell を選ぶ設定を生成する。単に `--browser=chromium` を渡すと別 binary を探す場合があるため、実際の起動で確認する。
+    - 手順書には、`base` と `deno` の双方について、CLI が使う Playwright 版にテスト依存を揃える方法、TS scenario の作成、通常テストと CI への接続、browser binary の初回導入と再実行の確認を記載する。
+    - 有効・無効の生成結果を両 variant で検証し、CLI とテストの導入によって既存の release overlay や生成時の依存条件が変わらないことを確認する。
+  - A: Inspected Archetect render contract and existing test structure; implemented browser opt-in, shared overlay tasks, docs, and generation checks.
+- U2: 重厚すぎる。mise.tomlにinlineで書いて。確実さより簡潔さを優先する
+  - A: Moved retry behavior into the mise task to keep the implementation compact.
+- U3: cliはagent用だからREADMEで説明せずAGENTS.mdだけにして
+  - A: Kept CLI usage in generated AGENTS.md and test procedure in template documentation.
+- U4: npm specはmiseのvarsで共通化してくれ
+  - A: Centralized the pinned npm spec, later as a plain file in the task directory.
+- U5: openの判定する必要ある？ 渡されたものをそのまま実行して、未導入ならinstallしてから再実行のほうが安全では？
+  - A: Changed CLI flow to execute first and retry once only on browser-missing output.
+- U6: 未導入エラーからchronium特定はやめて。後からfirefoxなど追加してもscriptを変更しなくていいように。あとinstall-browserのcliから直接呼ぶのではなく、browser:installに一元化したほうがいい
+  - A: Delegated recovery to browser:install without parsing the browser name.
+- U7: いや、ブラウザを取り出さなくていい
+  - A: Removed browser name extraction from recovery logic.
+- U8: いや、無条件にinstallしていいだろ。install済みならなんもしないはずだから
+  - A: Confirmed an already installed browser makes the install task quick.
+- U9: いや、browserがmissingであることの判定はするが、browser実装の抽出はしないってこと。browser missingならbrowser:installに移譲するだけ
+  - A: Kept a generic missing-browser check and delegated installation.
+- U10: 判定のためにproc substだとstreamが途切れるだろ。teeのような仕組みにして
+  - A: Used tee to preserve streamed CLI output while capturing the error signature.
+- U11: vars.playwright\_browserは共有していないのに単一設定になっていて拡張性がない。browser:installにbrowserが追加できる構造になっていない。task内にinlineで書いたほうがマシ
+  - A: Moved install browser selection into browser:install for later extension.
+- U12: baseとdenoで同じmise taskが記述されているのがよくない。overlayにmise file taskを配置して共通化。denoもtaskのtool依存として記述できるはず。varsはtask内だけで定数になっていればいい
+  - A: Placed common tasks in the opt-in overlay with task-scoped Deno 2.9.5.
+- U13: 標準の.config/mise/tasksに配置すること
+  - A: Used standard .config/mise/tasks with an included TOML task file.
+- U14: playwright\_cli='npm:@playwright/cli\@0.1.21'、これをディレクトリ内のplain fileにしてそこから読むようにする
+  - A: Placed npm:@playwright/cli@0.1.21 in a plain file read by both tasks.
+- U15: 最新のarchtestにもないか？
+  - A: Tested current Archetect; rendered executable shell tasks lost their executable bit, so used mise TOML tasks.
+- U16: AGENTS.mdにcliの利用ガイドは書く。templateをlinkするのは、test追加の手順だけだ。
+  - A: Added CLI command guidance in generated AGENTS.md and linked only scenario instructions.
+- U17: base/mise.lockが古い
+  - A: Investigated base lock freshness with mise lock; no content diff appeared.
+- U18: .gitignoreのifは要らない
+  - A: Made .playwright-cli/ ignore unconditional in shared/.gitignore.
+- U19: taskのtoolsで宣言したdenoもrootのmise.lockに含まれるのか？
+  - A: Confirmed mise lock includes task-scoped Deno in the generated base browser repo.
+- U20: mise.lockがgeneratedではなくtemplateなのが気持ち悪い。templateの保守性が悪い
+  - A: Recognized that template-owned generated lock metadata harms maintenance.
+- U21: overlayからmise.lockの除いて、rendering後にrepo側で自動生成に任せたほうがよくないか？
+  - A: Examined removing template-owned lock entries and checked pinned mise behavior.
+- U22: シンプルにlock生成の責務をtemplateから除いていい
+  - A: Removed both variant lock templates and made generated repos own lock generation.
+- U23: render後にmise.lockを明示生成する手順にしていい
+  - A: Documented explicit mise lock after rendering, before install, in template README; tested pinned mise.
+- U24: base/README.mdにlock手順を書くのはおかしい。それはtemplateの使い方で、renderされたrepoの使い方ではない
+  - A: Removed lock instructions from generated READMEs and AGENTS.md; retained them in template README.
