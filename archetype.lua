@@ -40,6 +40,12 @@ if template_name == "deno" then
   )
 end
 
+local browser_automation = context:prompt_confirm(
+  "Enable Playwright browser automation?",
+  "browser_automation",
+  { default = false }
+)
+
 directory.render("shared", context, {
   destination = project_slug,
   if_exists = Existing.Error,
@@ -48,6 +54,13 @@ directory.render(template_name, context, {
   destination = project_slug,
   if_exists = Existing.Error,
 })
+
+if browser_automation then
+  directory.render("browser", context, {
+    destination = project_slug,
+    if_exists = Existing.Error,
+  })
+end
 
 if semantic_release then
   directory.render("deno-release", context, {

@@ -2,6 +2,7 @@ type License = "MIT" | "Apache-2.0";
 type Template = "base" | "deno";
 
 interface Scenario {
+  browserAutomation: boolean;
   license: License;
   name: string;
   projectName?: string;
@@ -17,10 +18,19 @@ const scenarios: Scenario[] = [
     template: "base",
     license: "MIT",
     semanticRelease: false,
+    browserAutomation: false,
   },
-  { name: "base-apache", template: "base", license: "Apache-2.0", semanticRelease: false },
-  { name: "deno-mit", template: "deno", license: "MIT", semanticRelease: false },
-  { name: "deno-apache-release", template: "deno", license: "Apache-2.0", semanticRelease: true },
+  { name: "base-apache", template: "base", license: "Apache-2.0", semanticRelease: false, browserAutomation: false },
+  { name: "deno-mit", template: "deno", license: "MIT", semanticRelease: false, browserAutomation: false },
+  {
+    name: "deno-apache-release",
+    template: "deno",
+    license: "Apache-2.0",
+    semanticRelease: true,
+    browserAutomation: false,
+  },
+  { name: "base-browser", template: "base", license: "MIT", semanticRelease: false, browserAutomation: true },
+  { name: "deno-browser-release", template: "deno", license: "MIT", semanticRelease: true, browserAutomation: true },
 ];
 
 async function exists(path: string): Promise<boolean> {
@@ -70,6 +80,7 @@ async function generateProject(
   if (scenario.template === "deno") {
     answers.push(`semantic_release=${scenario.semanticRelease}`);
   }
+  if (scenario.browserAutomation) answers.push("browser_automation=true");
 
   const args = ["render", archetype, destination, "--headless"];
   for (const answer of answers) args.push("-a", answer);
@@ -107,6 +118,38 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
   assert(!ci.includes("id-token: write"), `${scenario.name}: CI has release permissions`);
 
   const miseConfig = await Deno.readTextFile(`${project}/mise.toml`);
+  assert(!(await exists(`${project}/mise.lock`)), `${scenario.name}: render included mise.lock`);
+  const agents = await Deno.readTextFile(`${project}/AGENTS.md`);
+  const gitignore = await Deno.readTextFile(`${project}/.gitignore`);
+  const browserTasksPath = `${project}/.config/mise/tasks/browser.toml`;
+  const cliSpecifierPath = `${project}/.config/mise/tasks/browser/playwright-cli.txt`;
+  assert(
+    (await exists(browserTasksPath)) === scenario.browserAutomation &&
+      (await exists(cliSpecifierPath)) === scenario.browserAutomation &&
+      (await exists(`${project}/.playwright/cli.config.json`)) === scenario.browserAutomation &&
+      agents.includes("mise run browser:cli -- open <url>") === scenario.browserAutomation &&
+      agents.includes("repository-template scenario guide") === scenario.browserAutomation &&
+      gitignore.includes(".playwright-cli/"),
+    `${scenario.name}: browser opt-in files or guidance are incorrect`,
+  );
+  if (scenario.browserAutomation) {
+    const browserTasks = await Deno.readTextFile(browserTasksPath);
+    assert(
+      browserTasks.includes('["browser:cli"]') &&
+        browserTasks.includes('["browser:install"]') &&
+        browserTasks.match(/tools\.deno = "2\.9\.5"/g)?.length === 2 &&
+        browserTasks.match(/playwright-cli\.txt/g)?.length === 2 &&
+        (await Deno.readTextFile(cliSpecifierPath)).trim() === "npm:@playwright/cli@0.1.21",
+      `${scenario.name}: browser tasks lack pinned Deno or CLI`,
+    );
+  }
+  if (scenario.template === "base") {
+    assert(
+      !miseConfig.includes('deno = "2.9.5"') &&
+        !(await exists(`${project}/deno.json`)) && !(await exists(`${project}/deno.jsonc`)),
+      `${scenario.name}: base Deno manifest or tool state is incorrect`,
+    );
+  }
   assert(
     miseConfig.includes("[tasks.prepare]") === scenario.semanticRelease,
     `${scenario.name}: unexpected prepare task state`,
@@ -170,7 +213,17 @@ async function verifyScenario(root: string, scenario: Scenario): Promise<void> {
 
   const mise = Deno.env.get("REPOSITORY_TEMPLATE_MISE") ?? "mise";
   await run(mise, ["trust", "--yes", `${project}/mise.toml`], project);
+  await run(mise, ["lock"], project);
+  const miseLock = await Deno.readTextFile(`${project}/mise.lock`);
+  assert(
+    miseLock.includes("[[tools.deno]]") === (scenario.template === "deno" || scenario.browserAutomation),
+    `${scenario.name}: Deno lock state is incorrect`,
+  );
   await run(mise, ["install", "--yes"], project);
+  if (scenario.browserAutomation) {
+    await run(mise, ["run", "browser:cli", "--", "--help"], project);
+    assert(!(await exists(`${project}/deno.lock`)), `${scenario.name}: CLI wrote deno.lock`);
+  }
   if (scenario.semanticRelease) {
     const manifestPath = `${project}/deno.jsonc`;
     const manifest = await Deno.readTextFile(manifestPath);
@@ -195,6 +248,7 @@ async function verifyDenoNamePreserved(archetype: string, destination: string): 
     template: "deno",
     license: "MIT",
     semanticRelease: false,
+    browserAutomation: false,
   };
   await generateProject(archetype, destination, scenario);
   const manifest = await Deno.readTextFile(`${destination}/${scenario.name}/deno.jsonc`);

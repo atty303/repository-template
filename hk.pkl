@@ -5,7 +5,17 @@ min_hk_version = "1.55.0"
 
 local linters = new Mapping<String, Step> {
   ["archetect:interface"] {
-    glob = List("archetype.lua", "archetype.yaml", "shared/**/*", "base/**/*", "deno/**/*", "deno-release/**/*")
+    glob = List(
+      "archetype.lua",
+      "archetype.yaml",
+      "shared/**/*",
+      "base/**/*",
+      "deno/**/*",
+      "deno-release/**/*",
+      "browser/.config/mise/tasks/browser.toml",
+      "browser/.config/mise/tasks/browser/playwright-cli.txt",
+      "browser/.playwright/cli.config.json"
+    )
     check = new Command { argv = List("archetect", "interface", ".", "--json", "--explore") }
   }
   ["actionlint"] = (Builtins.actionlint) {

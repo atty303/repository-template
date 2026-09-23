@@ -29,8 +29,10 @@ mise install --yes
 ## Generate a repository
 
 The archetype requires `template`, `project_name`, `author`, and `license`.
-`semantic_release` is a Deno-only boolean and defaults to `false`. The generated
-repository is written to `<destination>/<normalized-project-name>`.
+`semantic_release` is a Deno-only boolean and defaults to `false`.
+`browser_automation` enables Playwright CLI in either variant and defaults to
+`false`. The generated repository is written to
+`<destination>/<normalized-project-name>`.
 
 Render the local checkout without prompts:
 
@@ -48,6 +50,9 @@ Running `mise run generate -- /tmp` without `--headless` prompts for answers.
 The generation path invokes Archetect directly; Deno is used only by this
 repository's maintenance checks and generation regression tests.
 
+See [Browser automation](docs/browser-automation.md) for the opt-in CLI and the
+procedure for adding TypeScript browser scenarios later.
+
 Render an immutable GitHub revision with Archetect as the caller's only mise
 tool dependency:
 
@@ -61,6 +66,18 @@ generated repository separately when needed:
 ```sh
 git -C /tmp/example init --initial-branch=main
 ```
+
+Before committing the generated repository, create its lockfile in the generated
+directory:
+
+```sh
+cd /tmp/example
+mise trust --yes
+mise lock
+mise install --yes
+```
+
+The archetype does not render `mise.lock`; the generated repository owns it.
 
 ## Maintain the archetype
 

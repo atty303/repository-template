@@ -20,3 +20,19 @@ Codex after the first install if the server was unavailable during startup.
 Keep changes focused, update documentation with public behavior, and use short
 Conventional Commit subjects. Do not push, publish, release, or change external
 state unless the user explicitly requests it.
+{% if browser_automation then %}
+
+## Browser automation
+
+Use `mise run browser:cli -- --help` for CLI commands. Start with
+`mise run browser:cli -- open <url>`, inspect with
+`mise run browser:cli -- snapshot`, and finish with
+`mise run browser:cli -- close`. A missing browser is installed automatically on
+the first `open`; no setup command is needed before normal CLI use.
+`mise run browser:install` is available for explicit installation.
+
+For TypeScript scenario tests, follow the
+[repository-template scenario guide][scenario-guide].
+
+[scenario-guide]: https://github.com/atty303/repository-template/blob/main/docs/browser-automation.md#add-a-typescript-scenario-later
+{% end %}

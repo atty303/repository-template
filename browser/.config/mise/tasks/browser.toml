@@ -1,0 +1,32 @@
+["browser:cli"]
+description = "Run the Playwright coding agent CLI"
+tools.deno = "2.9.5"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+playwright_cli=$(<"$MISE_PROJECT_ROOT/.config/mise/tasks/browser/playwright-cli.txt")
+output_file=$(mktemp)
+trap 'rm -f "$output_file"' EXIT
+if deno run --no-config -A "$playwright_cli" "$@" 2>&1 | tee "$output_file"; then
+  exit 0
+fi
+output=$(<"$output_file")
+if [[ "$output" == *'Browser "'*'" is not installed; expected executable at '* ]] &&
+  [[ "$output" == *'Run `playwright-cli install-browser '* ]]; then
+  rm -f "$output_file"
+  trap - EXIT
+  mise run browser:install
+  exec deno run --no-config -A "$playwright_cli" "$@"
+fi
+exit 1
+'''
+
+["browser:install"]
+description = "Install the Chromium headless shell"
+tools.deno = "2.9.5"
+run = '''
+#!/usr/bin/env bash
+set -euo pipefail
+playwright_cli=$(<"$MISE_PROJECT_ROOT/.config/mise/tasks/browser/playwright-cli.txt")
+exec deno run --no-config -A "$playwright_cli" install-browser chromium --only-shell
+'''
