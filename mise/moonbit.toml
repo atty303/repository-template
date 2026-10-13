@@ -48,6 +48,7 @@ if errorlevel 1 exit /b 1
 mkdir -p "$MISE_TOOL_INSTALL_PATH/lib"
 curl -fsSL --output "$MISE_TOOL_INSTALL_PATH/core.tar.gz" "https://cli.moonbitlang.com/cores/core-{{ vars.moonbit_version | urlencode }}.tar.gz"
 tar -xf "$MISE_TOOL_INSTALL_PATH/core.tar.gz" -C "$MISE_TOOL_INSTALL_PATH/lib"
+chmod +x "$MISE_TOOL_INSTALL_PATH"/bin/*
 rm "$MISE_TOOL_INSTALL_PATH/core.tar.gz"
 "$MISE_TOOL_INSTALL_PATH/bin/moon" -C "$MISE_TOOL_INSTALL_PATH/lib/core" bundle --warn-list -a --all
 "$MISE_TOOL_INSTALL_PATH/bin/moon" -C "$MISE_TOOL_INSTALL_PATH/lib/core" bundle --warn-list -a --target wasm-gc --quiet
