@@ -1,0 +1,60 @@
+# Shared MoonBit toolchain configuration for mise.
+# Copy the example below into your repository's mise.toml, remove the leading
+# comment markers, and replace the example values. Then run `mise install`.
+# Choose the exact toolchain version from https://www.moonbitlang.com/updates.
+# Set each checksum to the 64-character SHA-256 digest for that version's
+# archive (without the filename or `SHA256:` prefix). Windows ARM64 uses the
+# same x64 archive and checksum as Windows x64.
+# The Windows install command runs in cmd.exe and uses the built-in `curl.exe`
+# and `tar.exe` to download and extract the core ZIP; it does not need PowerShell.
+#
+# To fetch the archive checksums, replace `0.0.0%2Breplace-me` below with the
+# selected version; encode `+` as `%2B` in these URLs.
+# curl -fsSL "https://cli.moonbitlang.com/binaries/0.0.0%2Breplace-me/moonbit-darwin-aarch64.tar.gz.sha256"
+# curl -fsSL "https://cli.moonbitlang.com/binaries/0.0.0%2Breplace-me/moonbit-linux-x86_64.tar.gz.sha256"
+# curl -fsSL "https://cli.moonbitlang.com/binaries/0.0.0%2Breplace-me/moonbit-linux-aarch64.tar.gz.sha256"
+# curl -fsSL "https://cli.moonbitlang.com/binaries/0.0.0%2Breplace-me/moonbit-windows-x86_64.zip.sha256"
+#
+# include = [
+#   "git::https://github.com/atty303/repository-template.git//mise/moonbit.toml?ref=main",
+# ]
+#
+# [vars]
+# moonbit_version = "0.0.0+replace-me"
+# moonbit_sha256_macos_arm64 = "<64-character SHA-256 checksum>"
+# moonbit_sha256_linux_x64 = "<64-character SHA-256 checksum>"
+# moonbit_sha256_linux_arm64 = "<64-character SHA-256 checksum>"
+# moonbit_sha256_windows_x64 = "<64-character SHA-256 checksum>" # Used by Windows x64 and ARM64.
+#
+[tools."http:moonbit"]
+version = "{{ vars.moonbit_version }}"
+bin_path = "bin"
+postinstall = { run = '''{% if os() == "windows" %}
+if not exist "%MISE_TOOL_INSTALL_PATH%\lib" mkdir "%MISE_TOOL_INSTALL_PATH%\lib"
+if errorlevel 1 exit /b 1
+curl.exe -fsSL --output "%MISE_TOOL_INSTALL_PATH%\core.zip" "https://cli.moonbitlang.com/cores/core-{{ vars.moonbit_version | urlencode }}.zip"
+if errorlevel 1 exit /b 1
+tar.exe -xf "%MISE_TOOL_INSTALL_PATH%\core.zip" -C "%MISE_TOOL_INSTALL_PATH%\lib"
+if errorlevel 1 exit /b 1
+del /q "%MISE_TOOL_INSTALL_PATH%\core.zip"
+cd /d "%MISE_TOOL_INSTALL_PATH%\lib\core"
+if errorlevel 1 exit /b 1
+"%MISE_TOOL_INSTALL_PATH%\bin\moon.exe" bundle --warn-list -a --all
+if errorlevel 1 exit /b 1
+"%MISE_TOOL_INSTALL_PATH%\bin\moon.exe" bundle --warn-list -a --target wasm-gc --quiet
+if errorlevel 1 exit /b 1
+{% else %}
+mkdir -p "$MISE_TOOL_INSTALL_PATH/lib"
+curl -fsSL --output "$MISE_TOOL_INSTALL_PATH/core.tar.gz" "https://cli.moonbitlang.com/cores/core-{{ vars.moonbit_version | urlencode }}.tar.gz"
+tar -xf "$MISE_TOOL_INSTALL_PATH/core.tar.gz" -C "$MISE_TOOL_INSTALL_PATH/lib"
+rm "$MISE_TOOL_INSTALL_PATH/core.tar.gz"
+"$MISE_TOOL_INSTALL_PATH/bin/moon" -C "$MISE_TOOL_INSTALL_PATH/lib/core" bundle --warn-list -a --all
+"$MISE_TOOL_INSTALL_PATH/bin/moon" -C "$MISE_TOOL_INSTALL_PATH/lib/core" bundle --warn-list -a --target wasm-gc --quiet
+{% endif %}''' }
+
+[tools."http:moonbit".platforms]
+macos-arm64 = { url = "https://cli.moonbitlang.com/binaries/{{ vars.moonbit_version | urlencode }}/moonbit-darwin-aarch64.tar.gz", checksum = "sha256:{{ vars.moonbit_sha256_macos_arm64 }}" }
+linux-x64 = { url = "https://cli.moonbitlang.com/binaries/{{ vars.moonbit_version | urlencode }}/moonbit-linux-x86_64.tar.gz", checksum = "sha256:{{ vars.moonbit_sha256_linux_x64 }}" }
+linux-arm64 = { url = "https://cli.moonbitlang.com/binaries/{{ vars.moonbit_version | urlencode }}/moonbit-linux-aarch64.tar.gz", checksum = "sha256:{{ vars.moonbit_sha256_linux_arm64 }}" }
+windows-x64 = { url = "https://cli.moonbitlang.com/binaries/{{ vars.moonbit_version | urlencode }}/moonbit-windows-x86_64.zip", checksum = "sha256:{{ vars.moonbit_sha256_windows_x64 }}" }
+windows-arm64 = { url = "https://cli.moonbitlang.com/binaries/{{ vars.moonbit_version | urlencode }}/moonbit-windows-x86_64.zip", checksum = "sha256:{{ vars.moonbit_sha256_windows_x64 }}" }
