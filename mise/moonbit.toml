@@ -1,7 +1,10 @@
 # Shared MoonBit toolchain configuration for mise.
 # Copy the example below into your repository's mise.toml, remove the leading
 # comment markers, and replace the example values. Then run `mise install`.
-# Choose the exact toolchain version from https://www.moonbitlang.com/updates.
+# Read https://cli.moonbitlang.com/version.json and use the version for the
+# `moonc` item, not the `moon` item. Remove its leading `v` and trailing date,
+# but keep the `+<build-hash>` suffix: `v0.10.15+943464bfa (2026-10-12)` becomes
+# `0.10.15+943464bfa` for `moonbit_version`.
 # Set each checksum to the 64-character SHA-256 digest for that version's
 # archive (without the filename or `SHA256:` prefix). Windows ARM64 uses the
 # same x64 archive and checksum as Windows x64.
