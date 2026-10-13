@@ -8,8 +8,6 @@
 # Set each checksum to the 64-character SHA-256 digest for that version's
 # archive (without the filename or `SHA256:` prefix). Windows ARM64 uses the
 # same x64 archive and checksum as Windows x64.
-# The Windows install command runs in cmd.exe and uses the built-in `curl.exe`
-# and `tar.exe` to download and extract the core ZIP; it does not need PowerShell.
 #
 # To fetch the archive checksums, replace `0.0.0%2Breplace-me` below with the
 # selected version; encode `+` as `%2B` in these URLs.
